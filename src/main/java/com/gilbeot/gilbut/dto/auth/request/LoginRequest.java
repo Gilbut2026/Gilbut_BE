@@ -1,4 +1,4 @@
-package com.gilbeot.gilbut.dto.request;
+package com.gilbeot.gilbut.dto.auth.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
