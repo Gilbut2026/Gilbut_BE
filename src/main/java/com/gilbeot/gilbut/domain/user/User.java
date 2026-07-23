@@ -10,10 +10,16 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Table(
-        name = "user",
+        name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = "username"),
-                @UniqueConstraint(columnNames = {"provider", "providerId"})
+                @UniqueConstraint(
+                        name = "uk_users_username",
+                        columnNames = "username"
+                ),
+                @UniqueConstraint(
+                        name = "uk_users_provider_id",
+                        columnNames = "provider_id"
+                )
         }
 )
 public class User extends BaseEntity {
@@ -22,27 +28,22 @@ public class User extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    private String avatarUrl;
+    @Column(name = "provider_id", nullable = false, unique = true, length = 100)
+    private String providerId;
 
-    @Column(nullable = false, length = 20)
-    private String provider;      // kakao
-
-    @Column(nullable = false, unique = true, length = 100)
-    private String providerId;    // 카카오 회원 고유 id
-
-    // 카카오 로그인 시 재발급받은 refresh token 저장 (Redis 미사용, DB 컬럼 방식)
-    @Column(length = 255)
+    @Column(name = "refresh_token", length = 500)
     private String refreshToken;
 
     public void updateRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;
     }
 
-    public void update(String username, String avatarUrl) {
-        if (username != null) this.username = username;
-        if (avatarUrl != null) this.avatarUrl = avatarUrl;
+    public void updateUsername(String username) {
+        if (username != null && !username.isBlank()) {
+            this.username = username;
+        }
     }
 }

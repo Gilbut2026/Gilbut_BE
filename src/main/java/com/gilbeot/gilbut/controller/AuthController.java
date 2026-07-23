@@ -1,8 +1,8 @@
 package com.gilbeot.gilbut.controller;
 
-import com.gilbeot.gilbut.dto.request.LoginRequest;
-import com.gilbeot.gilbut.dto.request.TokenRequest;
-import com.gilbeot.gilbut.dto.response.TokenResponse;
+import com.gilbeot.gilbut.dto.auth.request.LoginRequest;
+import com.gilbeot.gilbut.dto.auth.request.TokenRequest;
+import com.gilbeot.gilbut.dto.auth.response.TokenResponse;
 import com.gilbeot.gilbut.global.common.api.ApiResponse;
 import com.gilbeot.gilbut.global.common.code.SuccessCode;
 import com.gilbeot.gilbut.service.auth.AuthService;

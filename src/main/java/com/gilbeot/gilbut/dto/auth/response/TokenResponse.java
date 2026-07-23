@@ -1,4 +1,4 @@
-package com.gilbeot.gilbut.dto.response;
+package com.gilbeot.gilbut.dto.auth.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

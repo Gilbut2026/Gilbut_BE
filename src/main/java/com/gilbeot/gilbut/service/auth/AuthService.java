@@ -1,7 +1,7 @@
 package com.gilbeot.gilbut.service.auth;
 
 import com.gilbeot.gilbut.domain.user.User;
-import com.gilbeot.gilbut.dto.response.TokenResponse;
+import com.gilbeot.gilbut.dto.auth.response.TokenResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.repository.UserRepository;
