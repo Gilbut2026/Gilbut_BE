@@ -55,7 +55,6 @@ public class UserMobilityProfileService {
         profile.update(
                 request.getWalkingDuration(),
                 request.getStairLevel(),
-                request.getUphillLevel(),
                 request.getRestStopPreference(),
                 request.getTransferLevel(),
                 request.getMobilityAid(),
@@ -79,10 +78,7 @@ public class UserMobilityProfileService {
                 .user(user)
                 .walkingDuration(request.getWalkingDuration())
                 .stairLevel(request.getStairLevel())
-                .uphillLevel(request.getUphillLevel())
-                .restStopPreference(
-                        request.getRestStopPreference()
-                )
+                .restStopPreference(request.getRestStopPreference())
                 .transferLevel(request.getTransferLevel())
                 .mobilityAid(request.getMobilityAid())
                 .mobilityAidDetail(
