@@ -104,7 +104,7 @@ public class EmergencyContactController {
         );
 
         return ApiResponse.success(
-                SuccessCode._NO_CONTENT,
+                SuccessCode._OK,
                 null
         );
     }
