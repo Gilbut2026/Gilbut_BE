@@ -28,6 +28,11 @@ public enum ErrorCode implements BaseCode {
             "기타 보조기구를 선택한 경우 상세 내용을 입력해야 합니다."
     ),
 
+    EMERGENCY_CONTACT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "비상 연락처를 찾을 수 없습니다."
+    ),
+
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "서버 오류가 발생했습니다."

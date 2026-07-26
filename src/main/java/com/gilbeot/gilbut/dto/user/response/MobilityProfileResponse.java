@@ -5,7 +5,6 @@ import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
-import com.gilbeot.gilbut.domain.user.type.UphillLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +16,6 @@ public class MobilityProfileResponse {
     private Long id;
     private WalkingDuration walkingDuration;
     private StairLevel stairLevel;
-    private UphillLevel uphillLevel;
     private RestStopPreference restStopPreference;
     private TransferLevel transferLevel;
     private MobilityAid mobilityAid;
@@ -30,7 +28,6 @@ public class MobilityProfileResponse {
                 .id(profile.getId())
                 .walkingDuration(profile.getWalkingDuration())
                 .stairLevel(profile.getStairLevel())
-                .uphillLevel(profile.getUphillLevel())
                 .restStopPreference(
                         profile.getRestStopPreference()
                 )

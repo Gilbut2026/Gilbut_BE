@@ -4,7 +4,6 @@ import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
-import com.gilbeot.gilbut.domain.user.type.UphillLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -20,9 +19,6 @@ public class MobilityProfileSaveRequest {
 
     @NotNull(message = "계단 이용 가능 정도를 선택해 주세요.")
     private StairLevel stairLevel;
-
-    @NotNull(message = "오르막길 이동 정도를 선택해 주세요.")
-    private UphillLevel uphillLevel;
 
     @NotNull(message = "쉬어 갈 곳 필요 여부를 선택해 주세요.")
     private RestStopPreference restStopPreference;

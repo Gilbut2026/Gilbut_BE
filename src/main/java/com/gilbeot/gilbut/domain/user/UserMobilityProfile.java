@@ -4,7 +4,6 @@ import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
-import com.gilbeot.gilbut.domain.user.type.UphillLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
 import com.gilbeot.gilbut.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -51,10 +50,6 @@ public class UserMobilityProfile extends BaseEntity {
     private StairLevel stairLevel;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "uphill_level", nullable = false, length = 30)
-    private UphillLevel uphillLevel;
-
-    @Enumerated(EnumType.STRING)
     @Column(name = "rest_stop_preference", nullable = false, length = 30)
     private RestStopPreference restStopPreference;
 
@@ -72,7 +67,6 @@ public class UserMobilityProfile extends BaseEntity {
     public void update(
             WalkingDuration walkingDuration,
             StairLevel stairLevel,
-            UphillLevel uphillLevel,
             RestStopPreference restStopPreference,
             TransferLevel transferLevel,
             MobilityAid mobilityAid,
@@ -80,7 +74,6 @@ public class UserMobilityProfile extends BaseEntity {
     ) {
         this.walkingDuration = walkingDuration;
         this.stairLevel = stairLevel;
-        this.uphillLevel = uphillLevel;
         this.restStopPreference = restStopPreference;
         this.transferLevel = transferLevel;
         this.mobilityAid = mobilityAid;
