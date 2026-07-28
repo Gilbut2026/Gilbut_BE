@@ -1,5 +1,6 @@
-package com.gilbeot.gilbut.domain.user;
+package com.gilbeot.gilbut.domain.favorite;
 
+import com.gilbeot.gilbut.domain.user.User;
 import com.gilbeot.gilbut.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;

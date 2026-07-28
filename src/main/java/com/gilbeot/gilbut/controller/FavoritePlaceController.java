@@ -1,8 +1,8 @@
 package com.gilbeot.gilbut.controller;
 
-import com.gilbeot.gilbut.dto.user.request.FavoritePlaceCreateRequest;
-import com.gilbeot.gilbut.dto.user.request.FavoritePlaceUpdateRequest;
-import com.gilbeot.gilbut.dto.user.response.FavoritePlaceResponse;
+import com.gilbeot.gilbut.dto.place.request.FavoritePlaceSaveRequest;
+import com.gilbeot.gilbut.dto.place.request.FavoritePlaceUpdateRequest;
+import com.gilbeot.gilbut.dto.place.response.FavoritePlaceResponse;
 import com.gilbeot.gilbut.global.common.api.ApiResponse;
 import com.gilbeot.gilbut.global.common.code.SuccessCode;
 import com.gilbeot.gilbut.service.user.FavoritePlaceService;
@@ -41,7 +41,7 @@ public class FavoritePlaceController {
     public ResponseEntity<ApiResponse<FavoritePlaceResponse>>
     createFavorite(
             Authentication authentication,
-            @Valid @RequestBody FavoritePlaceCreateRequest request
+            @Valid @RequestBody FavoritePlaceSaveRequest request
     ) {
         Long userId = extractUserId(authentication);
 

@@ -1,10 +1,10 @@
 package com.gilbeot.gilbut.service.user;
 
-import com.gilbeot.gilbut.domain.user.FavoritePlace;
+import com.gilbeot.gilbut.domain.favorite.FavoritePlace;
 import com.gilbeot.gilbut.domain.user.User;
-import com.gilbeot.gilbut.dto.user.request.FavoritePlaceCreateRequest;
-import com.gilbeot.gilbut.dto.user.request.FavoritePlaceUpdateRequest;
-import com.gilbeot.gilbut.dto.user.response.FavoritePlaceResponse;
+import com.gilbeot.gilbut.dto.place.request.FavoritePlaceSaveRequest;
+import com.gilbeot.gilbut.dto.place.request.FavoritePlaceUpdateRequest;
+import com.gilbeot.gilbut.dto.place.response.FavoritePlaceResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.repository.FavoritePlaceRepository;
@@ -36,7 +36,7 @@ public class FavoritePlaceService {
     @Transactional
     public FavoritePlaceResponse createFavorite(
             Long userId,
-            FavoritePlaceCreateRequest request
+            FavoritePlaceSaveRequest request
     ) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
