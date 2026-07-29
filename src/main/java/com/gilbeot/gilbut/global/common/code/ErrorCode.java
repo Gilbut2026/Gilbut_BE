@@ -56,6 +56,11 @@ public enum ErrorCode implements BaseCode {
     OAUTH_FAILED(
             HttpStatus.UNAUTHORIZED,
             "OAuth 인증에 실패했습니다."
+    ),
+
+    PLACE_SEARCH_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "장소 검색에 실패했습니다."
     );
 
     private final HttpStatus status;
