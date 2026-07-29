@@ -1,6 +1,6 @@
 package com.gilbeot.gilbut.repository;
 
-import com.gilbeot.gilbut.domain.user.FavoritePlace;
+import com.gilbeot.gilbut.domain.favorite.FavoritePlace;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

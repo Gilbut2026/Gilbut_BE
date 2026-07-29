@@ -1,6 +1,6 @@
-package com.gilbeot.gilbut.dto.user.response;
+package com.gilbeot.gilbut.dto.place.response;
 
-import com.gilbeot.gilbut.domain.user.FavoritePlace;
+import com.gilbeot.gilbut.domain.favorite.FavoritePlace;
 import lombok.Builder;
 import lombok.Getter;
 

@@ -1,4 +1,4 @@
-package com.gilbeot.gilbut.dto.user.request;
+package com.gilbeot.gilbut.dto.place.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

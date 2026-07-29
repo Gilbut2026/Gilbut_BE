@@ -1,4 +1,4 @@
-package com.gilbeot.gilbut.dto.user.request;
+package com.gilbeot.gilbut.dto.place.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class FavoritePlaceCreateRequest {
+public class FavoritePlaceSaveRequest {
 
     @NotBlank(message = "장소명 정보가 필요합니다.")
     @Size(
