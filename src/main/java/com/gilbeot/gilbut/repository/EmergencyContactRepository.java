@@ -17,4 +17,5 @@ public interface EmergencyContactRepository
             Long id,
             Long userId
     );
+    long countByUserId(Long userId);
 }
