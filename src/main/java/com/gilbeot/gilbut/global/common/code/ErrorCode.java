@@ -23,11 +23,6 @@ public enum ErrorCode implements BaseCode {
             "사용자 이동 특성 정보를 찾을 수 없습니다."
     ),
 
-    MOBILITY_AID_DETAIL_REQUIRED(
-            HttpStatus.BAD_REQUEST,
-            "기타 보조기구를 선택한 경우 상세 내용을 입력해야 합니다."
-    ),
-
     EMERGENCY_CONTACT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "비상 연락처를 찾을 수 없습니다."

@@ -6,7 +6,6 @@ import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,24 +13,28 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class MobilityProfileSaveRequest {
 
-    @NotNull(message = "한 번에 걸을 수 있는 시간을 선택해 주세요.")
+    @NotNull(
+            message = "한 번에 걸을 수 있는 시간을 선택해 주세요."
+    )
     private WalkingDuration walkingDuration;
 
-    @NotNull(message = "계단 이용 가능 정도를 선택해 주세요.")
+    @NotNull(
+            message = "계단 이용 가능 정도를 선택해 주세요."
+    )
     private StairLevel stairLevel;
 
-    @NotNull(message = "쉬어 갈 곳 필요 여부를 선택해 주세요.")
+    @NotNull(
+            message = "쉬어 갈 곳 필요 여부를 선택해 주세요."
+    )
     private RestStopPreference restStopPreference;
 
-    @NotNull(message = "환승 선호 정도를 선택해 주세요.")
+    @NotNull(
+            message = "환승 선호 정도를 선택해 주세요."
+    )
     private TransferLevel transferLevel;
 
-    @NotNull(message = "이동 보조기구 사용 여부를 선택해 주세요.")
-    private MobilityAid mobilityAid;
-
-    @Size(
-            max = 100,
-            message = "보조기구 상세 내용은 100자 이하로 입력해 주세요."
+    @NotNull(
+            message = "이동 보조기구 사용 여부를 선택해 주세요."
     )
-    private String mobilityAidDetail;
+    private MobilityAid mobilityAid;
 }
