@@ -9,4 +9,6 @@ public interface UserMobilityProfileRepository
         extends JpaRepository<UserMobilityProfile, Long> {
 
     Optional<UserMobilityProfile> findByUserId(Long userId);
+
+    boolean existsByUserId(Long userId);
 }

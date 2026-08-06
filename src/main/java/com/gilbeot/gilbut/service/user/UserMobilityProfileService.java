@@ -3,6 +3,10 @@ package com.gilbeot.gilbut.service.user;
 import com.gilbeot.gilbut.domain.user.User;
 import com.gilbeot.gilbut.domain.user.UserMobilityProfile;
 import com.gilbeot.gilbut.domain.user.type.MobilityAid;
+import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
+import com.gilbeot.gilbut.domain.user.type.StairLevel;
+import com.gilbeot.gilbut.domain.user.type.TransferLevel;
+import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
 import com.gilbeot.gilbut.dto.user.request.MobilityProfileSaveRequest;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
@@ -21,47 +25,71 @@ public class UserMobilityProfileService {
     private final UserRepository userRepository;
     private final UserMobilityProfileRepository mobilityProfileRepository;
 
-    // 사용자의 이동 특성 조회
-    public MobilityProfileResponse getMobilityProfile(Long userId) {
+    public MobilityProfileResponse getMobilityProfile(
+            Long userId
+    ) {
         UserMobilityProfile profile = mobilityProfileRepository
                 .findByUserId(userId)
                 .orElseThrow(() ->
-                        new CustomException(ErrorCode.MOBILITY_PROFILE_NOT_FOUND)
+                        new CustomException(
+                                ErrorCode.MOBILITY_PROFILE_NOT_FOUND
+                        )
                 );
 
         return MobilityProfileResponse.from(profile);
     }
 
-    // 이동 특성 신규 저장 또는 기존 설정 수정
     @Transactional
     public MobilityProfileResponse saveMobilityProfile(
             Long userId,
             MobilityProfileSaveRequest request
     ) {
-        validateMobilityAid(
-                request.getMobilityAid(),
-                request.getMobilityAidDetail()
-        );
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new CustomException(ErrorCode.USER_NOT_FOUND)
-                );
-
-        UserMobilityProfile profile = mobilityProfileRepository
-                .findByUserId(userId)
-                .orElseGet(() -> createProfile(user, request));
-
-        profile.update(
+        return saveMobilityProfile(
+                userId,
                 request.getWalkingDuration(),
                 request.getStairLevel(),
                 request.getRestStopPreference(),
                 request.getTransferLevel(),
-                request.getMobilityAid(),
-                normalizeMobilityAidDetail(
-                        request.getMobilityAid(),
-                        request.getMobilityAidDetail()
-                )
+                request.getMobilityAid()
+        );
+    }
+
+    @Transactional
+    public MobilityProfileResponse saveMobilityProfile(
+            Long userId,
+            WalkingDuration walkingDuration,
+            StairLevel stairLevel,
+            RestStopPreference restStopPreference,
+            TransferLevel transferLevel,
+            MobilityAid mobilityAid
+    ) {
+        User user = userRepository
+                .findById(userId)
+                .orElseThrow(() ->
+                        new CustomException(
+                                ErrorCode.USER_NOT_FOUND
+                        )
+                );
+
+        UserMobilityProfile profile = mobilityProfileRepository
+                .findByUserId(userId)
+                .orElseGet(() ->
+                        createProfile(
+                                user,
+                                walkingDuration,
+                                stairLevel,
+                                restStopPreference,
+                                transferLevel,
+                                mobilityAid
+                        )
+                );
+
+        profile.update(
+                walkingDuration,
+                stairLevel,
+                restStopPreference,
+                transferLevel,
+                mobilityAid
         );
 
         UserMobilityProfile savedProfile =
@@ -72,48 +100,19 @@ public class UserMobilityProfileService {
 
     private UserMobilityProfile createProfile(
             User user,
-            MobilityProfileSaveRequest request
+            WalkingDuration walkingDuration,
+            StairLevel stairLevel,
+            RestStopPreference restStopPreference,
+            TransferLevel transferLevel,
+            MobilityAid mobilityAid
     ) {
         return UserMobilityProfile.builder()
                 .user(user)
-                .walkingDuration(request.getWalkingDuration())
-                .stairLevel(request.getStairLevel())
-                .restStopPreference(request.getRestStopPreference())
-                .transferLevel(request.getTransferLevel())
-                .mobilityAid(request.getMobilityAid())
-                .mobilityAidDetail(
-                        normalizeMobilityAidDetail(
-                                request.getMobilityAid(),
-                                request.getMobilityAidDetail()
-                        )
-                )
+                .walkingDuration(walkingDuration)
+                .stairLevel(stairLevel)
+                .restStopPreference(restStopPreference)
+                .transferLevel(transferLevel)
+                .mobilityAid(mobilityAid)
                 .build();
-    }
-
-    private void validateMobilityAid(
-            MobilityAid mobilityAid,
-            String mobilityAidDetail
-    ) {
-        if (mobilityAid == MobilityAid.OTHER
-                && (mobilityAidDetail == null
-                || mobilityAidDetail.isBlank())) {
-
-            throw new CustomException(
-                    ErrorCode.MOBILITY_AID_DETAIL_REQUIRED
-            );
-        }
-    }
-
-    private String normalizeMobilityAidDetail(
-            MobilityAid mobilityAid,
-            String mobilityAidDetail
-    ) {
-        if (mobilityAid != MobilityAid.OTHER) {
-            return null;
-        }
-
-        return mobilityAidDetail == null
-                ? null
-                : mobilityAidDetail.trim();
     }
 }

@@ -14,27 +14,36 @@ import lombok.Getter;
 public class MobilityProfileResponse {
 
     private Long id;
+
     private WalkingDuration walkingDuration;
+
     private StairLevel stairLevel;
+
     private RestStopPreference restStopPreference;
+
     private TransferLevel transferLevel;
+
     private MobilityAid mobilityAid;
-    private String mobilityAidDetail;
 
     public static MobilityProfileResponse from(
             UserMobilityProfile profile
     ) {
         return MobilityProfileResponse.builder()
                 .id(profile.getId())
-                .walkingDuration(profile.getWalkingDuration())
-                .stairLevel(profile.getStairLevel())
+                .walkingDuration(
+                        profile.getWalkingDuration()
+                )
+                .stairLevel(
+                        profile.getStairLevel()
+                )
                 .restStopPreference(
                         profile.getRestStopPreference()
                 )
-                .transferLevel(profile.getTransferLevel())
-                .mobilityAid(profile.getMobilityAid())
-                .mobilityAidDetail(
-                        profile.getMobilityAidDetail()
+                .transferLevel(
+                        profile.getTransferLevel()
+                )
+                .mobilityAid(
+                        profile.getMobilityAid()
                 )
                 .build();
     }

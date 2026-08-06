@@ -14,15 +14,24 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class AccessibilitySettingUpdateRequest {
 
+    @NotNull(
+            message = "음성 안내 사용 여부를 선택해 주세요."
+    )
+    private Boolean voiceGuidanceEnabled;
 
-    private boolean voiceGuidanceEnabled;
+    @NotNull(
+            message = "고대비 화면 사용 여부를 선택해 주세요."
+    )
+    private Boolean highContrastEnabled;
 
-    private boolean highContrastEnabled;
-
-    @NotNull(message = "글자 크기를 선택해 주세요.")
+    @NotNull(
+            message = "글자 크기를 선택해 주세요."
+    )
     private FontSize fontSize;
 
-    @NotNull(message = "음성 안내 속도를 입력해 주세요.")
+    @NotNull(
+            message = "음성 안내 속도를 입력해 주세요."
+    )
     @DecimalMin(
             value = "0.7",
             inclusive = true,

@@ -110,4 +110,10 @@ public class UserAccessibilitySetting extends BaseEntity {
         this.fontSize = fontSize;
         this.voiceSpeed = voiceSpeed;
     }
+
+    public void updateVoiceGuidance(
+            boolean voiceGuidanceEnabled
+    ) {
+        this.voiceGuidanceEnabled = voiceGuidanceEnabled;
+    }
 }

@@ -11,7 +11,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class MobilityProfileSaveRequest {
+public class OnboardingSaveRequest {
+
+    @NotNull(
+            message = "음성 안내 사용 여부를 선택해 주세요."
+    )
+    private Boolean voiceGuidanceEnabled;
 
     @NotNull(
             message = "한 번에 걸을 수 있는 시간을 선택해 주세요."
