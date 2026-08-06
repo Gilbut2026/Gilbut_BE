@@ -58,8 +58,12 @@ public class UserAccessibilitySettingService {
                         );
 
         setting.update(
-                request.isVoiceGuidanceEnabled(),
-                request.isHighContrastEnabled(),
+                Boolean.TRUE.equals(
+                        request.getVoiceGuidanceEnabled()
+                ),
+                Boolean.TRUE.equals(
+                        request.getHighContrastEnabled()
+                ),
                 request.getFontSize(),
                 request.getVoiceSpeed()
         );
@@ -125,10 +129,14 @@ public class UserAccessibilitySettingService {
         return UserAccessibilitySetting.builder()
                 .user(user)
                 .voiceGuidanceEnabled(
-                        request.isVoiceGuidanceEnabled()
+                        Boolean.TRUE.equals(
+                                request.getVoiceGuidanceEnabled()
+                        )
                 )
                 .highContrastEnabled(
-                        request.isHighContrastEnabled()
+                        Boolean.TRUE.equals(
+                                request.getHighContrastEnabled()
+                        )
                 )
                 .fontSize(
                         request.getFontSize()

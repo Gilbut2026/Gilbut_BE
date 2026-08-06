@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,7 +25,7 @@ public class AuthController {
     // 카카오 로그인 (프론트에서 받은 인가코드를 넘겨받아 처리)
     @PostMapping("/kakao-login")
     public ResponseEntity<ApiResponse<LoginResponse>> kakaoLogin(
-            @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request
     ) {
         LoginResponse response =
                 kakaoOAuthService.authenticateUser(
@@ -39,7 +40,9 @@ public class AuthController {
 
     // refresh token으로 access token 재발급
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(@RequestBody TokenRequest request) {
+    public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(
+            @Valid @RequestBody TokenRequest request
+    ){
         TokenResponse response = authService.refresh(request.getRefreshToken());
         return ApiResponse.success(SuccessCode._OK, response);
     }
