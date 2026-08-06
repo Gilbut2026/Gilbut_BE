@@ -26,3 +26,7 @@ kakao:
 
 tmap:
   app-key: ${TMAP_APP_KEY}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
