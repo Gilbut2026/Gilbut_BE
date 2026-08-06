@@ -28,23 +28,19 @@ public class UserAccessibilitySettingService {
     private final UserAccessibilitySettingRepository
             accessibilitySettingRepository;
 
-
-    @Transactional
     public AccessibilitySettingResponse getAccessibilitySetting(
             Long userId
     ) {
         User user = findUser(userId);
 
-        UserAccessibilitySetting setting =
-                accessibilitySettingRepository
-                        .findByUserId(userId)
-                        .orElseGet(() ->
-                                accessibilitySettingRepository.save(
-                                        createDefaultSetting(user)
-                                )
-                        );
-
-        return AccessibilitySettingResponse.from(setting);
+        return accessibilitySettingRepository
+                .findByUserId(userId)
+                .map(AccessibilitySettingResponse::from)
+                .orElseGet(() ->
+                        AccessibilitySettingResponse.from(
+                                createDefaultSetting(user)
+                        )
+                );
     }
 
     @Transactional
@@ -74,8 +70,35 @@ public class UserAccessibilitySettingService {
         return AccessibilitySettingResponse.from(savedSetting);
     }
 
-    private User findUser(Long userId) {
-        return userRepository.findById(userId)
+    @Transactional
+    public AccessibilitySettingResponse saveVoiceGuidanceForOnboarding(
+            Long userId,
+            boolean voiceGuidanceEnabled
+    ) {
+        User user = findUser(userId);
+
+        UserAccessibilitySetting setting =
+                accessibilitySettingRepository
+                        .findByUserId(userId)
+                        .orElseGet(() ->
+                                createDefaultSetting(user)
+                        );
+
+        setting.updateVoiceGuidance(
+                voiceGuidanceEnabled
+        );
+
+        UserAccessibilitySetting savedSetting =
+                accessibilitySettingRepository.save(setting);
+
+        return AccessibilitySettingResponse.from(savedSetting);
+    }
+
+    private User findUser(
+            Long userId
+    ) {
+        return userRepository
+                .findById(userId)
                 .orElseThrow(() ->
                         new CustomException(
                                 ErrorCode.USER_NOT_FOUND
@@ -107,8 +130,12 @@ public class UserAccessibilitySettingService {
                 .highContrastEnabled(
                         request.isHighContrastEnabled()
                 )
-                .fontSize(request.getFontSize())
-                .voiceSpeed(request.getVoiceSpeed())
+                .fontSize(
+                        request.getFontSize()
+                )
+                .voiceSpeed(
+                        request.getVoiceSpeed()
+                )
                 .build();
     }
 }
