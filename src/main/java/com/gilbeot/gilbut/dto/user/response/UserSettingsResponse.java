@@ -7,6 +7,9 @@ import lombok.Getter;
 @Builder
 public class UserSettingsResponse {
 
+    // 필수 이동 설정 온보딩 완료 여부
+    private boolean onboardingCompleted;
+
     // 경로 추천 기준
     private MobilityProfileResponse mobilityProfile;
 

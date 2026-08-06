@@ -19,7 +19,7 @@ public class UserSettingsService {
     private final UserAccessibilitySettingService accessibilitySettingService;
     private final HomePlaceService homePlaceService;
     private final EmergencyContactRepository emergencyContactRepository;
-
+    private final OnboardingStatusService onboardingStatusService;
     public UserSettingsResponse getSettings(Long userId) {
 
         // 경로 추천 기준
@@ -51,6 +51,9 @@ public class UserSettingsService {
                         .build();
 
         return UserSettingsResponse.builder()
+                .onboardingCompleted(
+                        onboardingStatusService.isCompleted(userId)
+                )
                 .mobilityProfile(mobilityProfile)
                 .accessibilitySettings(accessibilitySettings)
                 .safety(safety)
