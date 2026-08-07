@@ -39,8 +39,8 @@ public class RouteCandidateAggregationService {
                             toWalkingRouteRequest(request)
                     );
 
-            candidates.add(
-                    routeCandidateMapper.fromWalkingRoute(
+            candidates.addAll(
+                    routeCandidateMapper.fromWalkingRoutes(
                             walkingRoute
                     )
             );

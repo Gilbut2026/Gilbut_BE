@@ -1,11 +1,13 @@
 package com.gilbeot.gilbut.service.route;
 
 import com.gilbeot.gilbut.domain.route.RouteType;
+import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteSummaryResponse;
+import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteSummaryResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
@@ -74,14 +76,16 @@ class RouteCandidateAggregationServiceTest {
                 .isNotBlank();
 
         assertThat(result.getCandidates())
-                .hasSize(2);
+                .hasSize(3);
 
         assertThat(
                 result.getCandidates()
                         .get(0)
                         .getRouteId()
         ).isEqualTo(
-                walkingRoute.getRouteId()
+                walkingRoute.getRoutes()
+                        .get(0)
+                        .getRouteId()
         );
 
         assertThat(
@@ -97,6 +101,24 @@ class RouteCandidateAggregationServiceTest {
                         .get(1)
                         .getRouteId()
         ).isEqualTo(
+                walkingRoute.getRoutes()
+                        .get(1)
+                        .getRouteId()
+        );
+
+        assertThat(
+                result.getCandidates()
+                        .get(1)
+                        .getRouteType()
+        ).isEqualTo(
+                RouteType.WALKING
+        );
+
+        assertThat(
+                result.getCandidates()
+                        .get(2)
+                        .getRouteId()
+        ).isEqualTo(
                 transitRoutes.getRoutes()
                         .get(0)
                         .getRouteId()
@@ -104,7 +126,7 @@ class RouteCandidateAggregationServiceTest {
 
         assertThat(
                 result.getCandidates()
-                        .get(1)
+                        .get(2)
                         .getRouteType()
         ).isEqualTo(
                 RouteType.TRANSIT
@@ -194,11 +216,19 @@ class RouteCandidateAggregationServiceTest {
                         );
 
         assertThat(result.getCandidates())
-                .hasSize(1);
+                .hasSize(2);
 
         assertThat(
                 result.getCandidates()
                         .get(0)
+                        .getRouteType()
+        ).isEqualTo(
+                RouteType.WALKING
+        );
+
+        assertThat(
+                result.getCandidates()
+                        .get(1)
                         .getRouteType()
         ).isEqualTo(
                 RouteType.WALKING
@@ -267,25 +297,64 @@ class RouteCandidateAggregationServiceTest {
 
     private WalkingRouteResponse createWalkingRoute() {
 
+        WalkingRouteItemResponse defaultRoute =
+                WalkingRouteItemResponse.builder()
+                        .routeId(
+                                "walking-uuid-1"
+                        )
+                        .routeOption(
+                                WalkingRouteOption.DEFAULT
+                        )
+                        .summary(
+                                WalkingRouteSummaryResponse.builder()
+                                        .totalDistanceM(
+                                                1500
+                                        )
+                                        .totalTimeSec(
+                                                1800
+                                        )
+                                        .build()
+                        )
+                        .routePoints(
+                                List.of()
+                        )
+                        .steps(
+                                List.of()
+                        )
+                        .build();
+
+        WalkingRouteItemResponse avoidStairsRoute =
+                WalkingRouteItemResponse.builder()
+                        .routeId(
+                                "walking-avoid-stairs-uuid-1"
+                        )
+                        .routeOption(
+                                WalkingRouteOption.AVOID_STAIRS
+                        )
+                        .summary(
+                                WalkingRouteSummaryResponse.builder()
+                                        .totalDistanceM(
+                                                1700
+                                        )
+                                        .totalTimeSec(
+                                                2100
+                                        )
+                                        .build()
+                        )
+                        .routePoints(
+                                List.of()
+                        )
+                        .steps(
+                                List.of()
+                        )
+                        .build();
+
         return WalkingRouteResponse.builder()
-                .routeId(
-                        "walking-uuid-1"
-                )
-                .summary(
-                        WalkingRouteSummaryResponse.builder()
-                                .totalDistanceM(
-                                        1500
-                                )
-                                .totalTimeSec(
-                                        1800
-                                )
-                                .build()
-                )
-                .routePoints(
-                        List.of()
-                )
-                .steps(
-                        List.of()
+                .routes(
+                        List.of(
+                                defaultRoute,
+                                avoidStairsRoute
+                        )
                 )
                 .build();
     }
