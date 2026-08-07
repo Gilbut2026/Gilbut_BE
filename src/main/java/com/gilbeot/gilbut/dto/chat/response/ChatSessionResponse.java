@@ -2,6 +2,7 @@ package com.gilbeot.gilbut.dto.chat.response;
 
 import com.gilbeot.gilbut.domain.chat.ChatSession;
 import com.gilbeot.gilbut.domain.chat.ChatState;
+import com.gilbeot.gilbut.domain.chat.OriginType;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -15,6 +16,8 @@ public class ChatSessionResponse {
 
     private PlaceContextResponse destination;
 
+    private OriginType originType;
+
     private PlaceContextResponse origin;
 
     private String selectedRouteId;
@@ -26,6 +29,7 @@ public class ChatSessionResponse {
                 .sessionId(session.getSessionId())
                 .currentState(session.getCurrentState())
                 .destination(createDestination(session))
+                .originType(session.getOriginType())
                 .origin(createOrigin(session))
                 .selectedRouteId(session.getSelectedRouteId())
                 .activeRequestId(session.getActiveRequestId())
