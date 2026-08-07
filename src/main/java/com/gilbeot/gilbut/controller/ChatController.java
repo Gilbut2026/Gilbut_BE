@@ -2,6 +2,7 @@ package com.gilbeot.gilbut.controller;
 
 import com.gilbeot.gilbut.dto.chat.request.ChatMessageRequest;
 import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
+import com.gilbeot.gilbut.dto.chat.request.DepartureTimeConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatMessageResponse;
 import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
 import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
@@ -104,5 +105,27 @@ public class ChatController {
                     e
             );
         }
+    }
+
+    @PostMapping("/departure-time-confirmation")
+    public ResponseEntity<ApiResponse<ChatSessionResponse>>
+    confirmDepartureTime(
+            Authentication authentication,
+            @Valid @RequestBody
+            DepartureTimeConfirmationRequest request
+    ) {
+        Long userId =
+                extractUserId(authentication);
+
+        ChatSessionResponse response =
+                chatService.confirmDepartureTime(
+                        userId,
+                        request
+                );
+
+        return ApiResponse.success(
+                SuccessCode._OK,
+                response
+        );
     }
 }

@@ -12,6 +12,7 @@ import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.ChatMessageRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatMessageResponse;
 import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
+import com.gilbeot.gilbut.dto.chat.request.DepartureTimeConfirmationRequest;
 import com.gilbeot.gilbut.dto.place.request.PlaceSearchRequest;
 import com.gilbeot.gilbut.dto.place.response.PlaceItemResponse;
 import com.gilbeot.gilbut.dto.place.response.PlaceSearchResponse;
@@ -185,5 +186,16 @@ public class ChatService {
                     ErrorCode.AI_CHAT_RESPONSE_INVALID
             );
         }
+    }
+
+    public ChatSessionResponse confirmDepartureTime(
+            Long userId,
+            DepartureTimeConfirmationRequest request
+    ) {
+        return chatSessionService
+                .confirmDepartureTime(
+                        userId,
+                        request
+                );
     }
 }

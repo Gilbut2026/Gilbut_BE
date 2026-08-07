@@ -19,7 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -138,6 +138,9 @@ public class ChatSession extends BaseEntity {
     )
     private String activeRequestId;
 
+    @Column(name = "departure_datetime")
+    private LocalDateTime departureDateTime;
+
     public static ChatSession create(User user) {
         return ChatSession.builder()
                 .user(user)
@@ -242,7 +245,16 @@ public class ChatSession extends BaseEntity {
     }
 
     private void clearRouteContext() {
+        this.departureDateTime = null;
         this.selectedRouteId = null;
         this.activeRequestId = null;
+    }
+
+    public void confirmDepartureTime(
+            LocalDateTime departureDateTime
+    ) {
+        this.departureDateTime = departureDateTime;
+        this.currentState =
+                ChatState.TODAY_CONDITION_CONFIRMATION;
     }
 }
