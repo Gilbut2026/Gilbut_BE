@@ -27,6 +27,11 @@ kakao:
 tmap:
   app-key: ${TMAP_APP_KEY}
 
+ai:
+  chat-url: ${AI_CHAT_URL:}
+  connect-timeout-ms: ${AI_CONNECT_TIMEOUT_MS:5000}
+  read-timeout-ms: ${AI_READ_TIMEOUT_MS:30000}
+
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
