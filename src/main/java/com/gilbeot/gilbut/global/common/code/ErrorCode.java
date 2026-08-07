@@ -63,6 +63,11 @@ public enum ErrorCode implements BaseCode {
             "장소 검색에 실패했습니다."
     ),
 
+    ROUTE_SEARCH_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "경로 조회에 실패했습니다."
+    ),
+
     STATION_SEARCH_FAILED(
             HttpStatus.BAD_GATEWAY,
             "주변 역 검색에 실패했습니다."
