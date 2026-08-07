@@ -1,10 +1,13 @@
 package com.gilbeot.gilbut.service.route;
 
 import com.gilbeot.gilbut.domain.route.RouteType;
-import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
-import com.gilbeot.gilbut.dto.route.RouteMetrics;
+import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteItemResponse;
+import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
+import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteSummaryResponse;
+import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
+import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteSummaryResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,105 +23,164 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RouteCandidateAggregationServiceTest {
 
     @Mock
-    private RouteCandidateService routeCandidateService;
+    private WalkingRouteService walkingRouteService;
 
     @Mock
-    private WalkingRouteCandidateService walkingRouteCandidateService;
+    private TransitRouteService transitRouteService;
 
-    private RouteCandidateAggregationService routeCandidateAggregationService;
+    private RouteCandidateAggregationService
+            routeCandidateAggregationService;
 
     @BeforeEach
     void setUp() {
         routeCandidateAggregationService =
                 new RouteCandidateAggregationService(
-                        routeCandidateService,
-                        walkingRouteCandidateService
+                        walkingRouteService,
+                        transitRouteService,
+                        new RouteCandidateMapper()
                 );
     }
 
     @Test
-    @DisplayName("보행 경로와 대중교통 경로 후보를 하나의 결과로 통합한다")
+    @DisplayName("상세 보행 경로와 대중교통 경로를 동일한 routeId의 추천 후보로 변환한다")
     void createCandidates() {
-        RouteCandidate walkingCandidate = createWalkingCandidate();
-        RouteCandidate transitCandidate = createTransitCandidate();
 
-        when(walkingRouteCandidateService.createCandidate(any()))
-                .thenReturn(walkingCandidate);
+        WalkingRouteResponse walkingRoute =
+                createWalkingRoute();
 
-        when(routeCandidateService.createCandidates(any()))
-                .thenReturn(
-                        RouteCandidateResult.builder()
-                                .requestId("transit-request")
-                                .candidates(List.of(transitCandidate))
-                                .build()
-                );
+        TransitRouteResponse transitRoutes =
+                createTransitRoutes();
+
+        when(walkingRouteService.search(any()))
+                .thenReturn(walkingRoute);
+
+        when(transitRouteService.search(any()))
+                .thenReturn(transitRoutes);
 
         RouteCandidateResult result =
-                routeCandidateAggregationService.createCandidates(
-                        createRequest()
-                );
+                routeCandidateAggregationService
+                        .createCandidates(
+                                createRequest()
+                        );
 
-        assertThat(result.getRequestId()).isNotBlank();
-        assertThat(result.getCandidates()).hasSize(2);
+        assertThat(result.getRequestId())
+                .isNotBlank();
 
-        assertThat(result.getCandidates().get(0).getRouteId())
-                .isEqualTo("walking-1");
+        assertThat(result.getCandidates())
+                .hasSize(2);
 
-        assertThat(result.getCandidates().get(0).getRouteType())
-                .isEqualTo(RouteType.WALKING);
+        assertThat(
+                result.getCandidates()
+                        .get(0)
+                        .getRouteId()
+        ).isEqualTo(
+                walkingRoute.getRouteId()
+        );
 
-        assertThat(result.getCandidates().get(1).getRouteId())
-                .isEqualTo("transit-1");
+        assertThat(
+                result.getCandidates()
+                        .get(0)
+                        .getRouteType()
+        ).isEqualTo(
+                RouteType.WALKING
+        );
 
-        assertThat(result.getCandidates().get(1).getRouteType())
-                .isEqualTo(RouteType.TRANSIT);
+        assertThat(
+                result.getCandidates()
+                        .get(1)
+                        .getRouteId()
+        ).isEqualTo(
+                transitRoutes.getRoutes()
+                        .get(0)
+                        .getRouteId()
+        );
+
+        assertThat(
+                result.getCandidates()
+                        .get(1)
+                        .getRouteType()
+        ).isEqualTo(
+                RouteType.TRANSIT
+        );
+
+        assertThat(
+                result.getWalkingRoute()
+        ).isSameAs(
+                walkingRoute
+        );
+
+        assertThat(
+                result.getTransitRoutes()
+        ).isSameAs(
+                transitRoutes
+        );
+
+        verify(walkingRouteService)
+                .search(any());
+
+        verify(transitRouteService)
+                .search(any());
     }
 
     @Test
     @DisplayName("보행 경로 조회가 실패해도 대중교통 경로를 반환한다")
     void createCandidatesWhenWalkingFails() {
-        when(walkingRouteCandidateService.createCandidate(any()))
+
+        when(walkingRouteService.search(any()))
                 .thenThrow(
                         new CustomException(
                                 ErrorCode.ROUTE_SEARCH_FAILED
                         )
                 );
 
-        when(routeCandidateService.createCandidates(any()))
+        when(transitRouteService.search(any()))
                 .thenReturn(
-                        RouteCandidateResult.builder()
-                                .requestId("transit-request")
-                                .candidates(
-                                        List.of(
-                                                createTransitCandidate()
-                                        )
-                                )
-                                .build()
+                        createTransitRoutes()
                 );
 
         RouteCandidateResult result =
-                routeCandidateAggregationService.createCandidates(
-                        createRequest()
-                );
+                routeCandidateAggregationService
+                        .createCandidates(
+                                createRequest()
+                        );
 
-        assertThat(result.getCandidates()).hasSize(1);
-        assertThat(result.getCandidates().get(0).getRouteType())
-                .isEqualTo(RouteType.TRANSIT);
+        assertThat(result.getCandidates())
+                .hasSize(1);
+
+        assertThat(
+                result.getCandidates()
+                        .get(0)
+                        .getRouteType()
+        ).isEqualTo(
+                RouteType.TRANSIT
+        );
+
+        assertThat(
+                result.getWalkingRoute()
+        ).isNull();
+
+        assertThat(
+                result.getTransitRoutes()
+        ).isNotNull();
     }
 
     @Test
     @DisplayName("대중교통 경로 조회가 실패해도 보행 경로를 반환한다")
     void createCandidatesWhenTransitFails() {
-        when(walkingRouteCandidateService.createCandidate(any()))
-                .thenReturn(createWalkingCandidate());
 
-        when(routeCandidateService.createCandidates(any()))
+        when(walkingRouteService.search(any()))
+                .thenReturn(
+                        createWalkingRoute()
+                );
+
+        when(transitRouteService.search(any()))
                 .thenThrow(
                         new CustomException(
                                 ErrorCode.ROUTE_SEARCH_FAILED
@@ -126,26 +188,43 @@ class RouteCandidateAggregationServiceTest {
                 );
 
         RouteCandidateResult result =
-                routeCandidateAggregationService.createCandidates(
-                        createRequest()
-                );
+                routeCandidateAggregationService
+                        .createCandidates(
+                                createRequest()
+                        );
 
-        assertThat(result.getCandidates()).hasSize(1);
-        assertThat(result.getCandidates().get(0).getRouteType())
-                .isEqualTo(RouteType.WALKING);
+        assertThat(result.getCandidates())
+                .hasSize(1);
+
+        assertThat(
+                result.getCandidates()
+                        .get(0)
+                        .getRouteType()
+        ).isEqualTo(
+                RouteType.WALKING
+        );
+
+        assertThat(
+                result.getWalkingRoute()
+        ).isNotNull();
+
+        assertThat(
+                result.getTransitRoutes()
+        ).isNull();
     }
 
     @Test
     @DisplayName("보행과 대중교통 경로 조회가 모두 실패하면 예외가 발생한다")
     void createCandidatesWhenAllRoutesFail() {
-        when(walkingRouteCandidateService.createCandidate(any()))
+
+        when(walkingRouteService.search(any()))
                 .thenThrow(
                         new CustomException(
                                 ErrorCode.ROUTE_SEARCH_FAILED
                         )
                 );
 
-        when(routeCandidateService.createCandidates(any()))
+        when(transitRouteService.search(any()))
                 .thenThrow(
                         new CustomException(
                                 ErrorCode.ROUTE_SEARCH_FAILED
@@ -153,22 +232,22 @@ class RouteCandidateAggregationServiceTest {
                 );
 
         assertThatThrownBy(() ->
-                routeCandidateAggregationService.createCandidates(
-                        createRequest()
-                )
-        )
-                .isInstanceOf(CustomException.class)
-                .satisfies(exception ->
-                        assertThat(
-                                ((CustomException) exception)
-                                        .getErrorCode()
-                        ).isEqualTo(
-                                ErrorCode.ROUTE_SEARCH_FAILED
+                routeCandidateAggregationService
+                        .createCandidates(
+                                createRequest()
                         )
+        )
+                .isInstanceOf(
+                        CustomException.class
+                )
+                .extracting("errorCode")
+                .isEqualTo(
+                        ErrorCode.ROUTE_SEARCH_FAILED
                 );
     }
 
     private RouteCandidateRequest createRequest() {
+
         return RouteCandidateRequest.builder()
                 .originLatitude(37.2636)
                 .originLongitude(127.0286)
@@ -186,34 +265,66 @@ class RouteCandidateAggregationServiceTest {
                 .build();
     }
 
-    private RouteCandidate createWalkingCandidate() {
-        return RouteCandidate.builder()
-                .routeId("walking-1")
-                .routeType(RouteType.WALKING)
-                .providerRank(1)
-                .metrics(
-                        RouteMetrics.builder()
-                                .totalTimeSec(1800)
-                                .totalWalkTimeSec(1800)
-                                .totalWalkDistanceM(1500)
-                                .transferCount(0)
+    private WalkingRouteResponse createWalkingRoute() {
+
+        return WalkingRouteResponse.builder()
+                .routeId(
+                        "walking-uuid-1"
+                )
+                .summary(
+                        WalkingRouteSummaryResponse.builder()
+                                .totalDistanceM(
+                                        1500
+                                )
+                                .totalTimeSec(
+                                        1800
+                                )
                                 .build()
+                )
+                .routePoints(
+                        List.of()
+                )
+                .steps(
+                        List.of()
                 )
                 .build();
     }
 
-    private RouteCandidate createTransitCandidate() {
-        return RouteCandidate.builder()
-                .routeId("transit-1")
-                .routeType(RouteType.TRANSIT)
-                .providerRank(1)
-                .metrics(
-                        RouteMetrics.builder()
-                                .totalTimeSec(1500)
-                                .totalWalkTimeSec(420)
-                                .totalWalkDistanceM(350)
-                                .transferCount(1)
-                                .build()
+    private TransitRouteResponse createTransitRoutes() {
+
+        TransitRouteItemResponse route =
+                TransitRouteItemResponse.builder()
+                        .routeId(
+                                "transit-uuid-1"
+                        )
+                        .providerRank(1)
+                        .summary(
+                                TransitRouteSummaryResponse.builder()
+                                        .totalTimeSec(
+                                                1500
+                                        )
+                                        .totalWalkTimeSec(
+                                                420
+                                        )
+                                        .totalWalkDistanceM(
+                                                350
+                                        )
+                                        .transferCount(
+                                                1
+                                        )
+                                        .build()
+                        )
+                        .routePoints(
+                                List.of()
+                        )
+                        .legs(
+                                List.of()
+                        )
+                        .build();
+
+        return TransitRouteResponse.builder()
+                .routes(
+                        List.of(route)
                 )
                 .build();
     }

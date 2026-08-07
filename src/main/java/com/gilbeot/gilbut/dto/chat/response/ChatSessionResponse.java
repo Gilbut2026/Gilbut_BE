@@ -3,7 +3,6 @@ package com.gilbeot.gilbut.dto.chat.response;
 import com.gilbeot.gilbut.domain.chat.ChatSession;
 import com.gilbeot.gilbut.domain.chat.ChatState;
 import com.gilbeot.gilbut.domain.chat.OriginType;
-import com.gilbeot.gilbut.domain.chat.TodayCondition;
 import lombok.Builder;
 import lombok.Getter;
 import java.time.LocalDateTime;
@@ -27,8 +26,6 @@ public class ChatSessionResponse {
 
     private LocalDateTime departureDateTime;
 
-    private TodayCondition todayCondition;
-
     public static ChatSessionResponse from(ChatSession session) {
         return ChatSessionResponse.builder()
                 .sessionId(session.getSessionId())
@@ -41,7 +38,6 @@ public class ChatSessionResponse {
                 .departureDateTime(
                         session.getDepartureDateTime()
                 )
-                .todayCondition(session.getTodayCondition())
                 .build();
     }
 

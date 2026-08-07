@@ -112,7 +112,7 @@ class ChatSessionTest {
     }
 
     @Test
-    @DisplayName("출발 시간을 확정하면 시간이 저장되고 당일 상태 확인 단계로 이동한다")
+    @DisplayName("출발 시간을 확정하면 시간이 저장되고 경로 계산 단계로 이동한다")
     void confirmDepartureTime() {
 
         User user = User.builder()
@@ -161,12 +161,12 @@ class ChatSessionTest {
 
         assertThat(session.getCurrentState())
                 .isEqualTo(
-                        ChatState.TODAY_CONDITION_CONFIRMATION
+                        ChatState.ROUTE_CALCULATING
                 );
     }
 
     @Test
-    @DisplayName("세션 초기화 시 이동 Context와 출발 시간, 오늘 이동 상태가 제거된다")
+    @DisplayName("세션 초기화 시 이동 Context와 출발 시간이 제거된다")
     void resetChatSession() {
 
         User user = User.builder()
@@ -181,7 +181,6 @@ class ChatSessionTest {
         String previousSessionId =
                 session.getSessionId();
 
-        // 목적지 설정
         session.confirmDestination(
                 "12345",
                 "수원역",
@@ -190,7 +189,6 @@ class ChatSessionTest {
                 126.9998
         );
 
-        // 출발지 설정
         session.confirmOrigin(
                 OriginType.PLACE,
                 "67890",
@@ -202,7 +200,6 @@ class ChatSessionTest {
 
         session.moveToDepartureTimeConfirmation();
 
-        // 출발시간 설정
         LocalDateTime departureDateTime =
                 LocalDateTime.of(
                         2026,
@@ -216,30 +213,18 @@ class ChatSessionTest {
                 departureDateTime
         );
 
-        // 오늘 이동 상태 설정
-        session.confirmTodayCondition(
-                TodayCondition.WHEELCHAIR
-        );
-
-        // 경로 계산 정보 설정
         session.startRouteCalculation(
                 "request-1"
         );
 
-        // reset 전 값이 실제로 들어갔는지 확인
         assertThat(session.getDepartureDateTime())
                 .isEqualTo(departureDateTime);
-
-        assertThat(session.getTodayCondition())
-                .isEqualTo(TodayCondition.WHEELCHAIR);
 
         assertThat(session.getActiveRequestId())
                 .isEqualTo("request-1");
 
-        // 세션 초기화
         session.reset();
 
-        // 초기화 결과 검증
         assertThat(session.getSessionId())
                 .isNotEqualTo(previousSessionId);
 
@@ -258,73 +243,10 @@ class ChatSessionTest {
         assertThat(session.getDepartureDateTime())
                 .isNull();
 
-        assertThat(session.getTodayCondition())
-                .isNull();
-
         assertThat(session.getActiveRequestId())
                 .isNull();
 
         assertThat(session.getSelectedRouteId())
                 .isNull();
-    }
-
-    @Test
-    @DisplayName("오늘 이동 상태를 확정하면 상태가 저장되고 경로 계산 단계로 이동한다")
-    void confirmTodayCondition() {
-
-        User user = User.builder()
-                .id(1L)
-                .username("test-user")
-                .providerId("kakao-test")
-                .build();
-
-        ChatSession session =
-                ChatSession.create(user);
-
-        session.confirmDestination(
-                "12345",
-                "아주대학교병원",
-                "경기도 수원시 영통구 월드컵로 164",
-                37.279,
-                127.047
-        );
-
-        session.confirmOrigin(
-                OriginType.CURRENT_LOCATION,
-                null,
-                "현재 위치",
-                null,
-                37.2636,
-                127.0286
-        );
-
-        session.moveToDepartureTimeConfirmation();
-
-        LocalDateTime departureDateTime =
-                LocalDateTime.of(
-                        2026,
-                        8,
-                        8,
-                        10,
-                        0
-                );
-
-        session.confirmDepartureTime(
-                departureDateTime
-        );
-
-        session.confirmTodayCondition(
-                TodayCondition.INCREASED_DISCOMFORT
-        );
-
-        assertThat(session.getTodayCondition())
-                .isEqualTo(
-                        TodayCondition.INCREASED_DISCOMFORT
-                );
-
-        assertThat(session.getCurrentState())
-                .isEqualTo(
-                        ChatState.ROUTE_CALCULATING
-                );
     }
 }
