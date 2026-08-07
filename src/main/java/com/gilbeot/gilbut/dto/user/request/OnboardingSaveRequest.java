@@ -39,7 +39,7 @@ public class OnboardingSaveRequest {
     private TransferLevel transferLevel;
 
     @NotNull(
-            message = "이동 보조기구 사용 여부를 선택해 주세요."
+            message = "이동 보조기구를 선택해 주세요."
     )
     private MobilityAid mobilityAid;
 }
