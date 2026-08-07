@@ -1,5 +1,6 @@
 package com.gilbeot.gilbut.client.tmap;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gilbeot.gilbut.client.tmap.dto.place.TmapPlaceSearchResponse;
 import com.gilbeot.gilbut.domain.station.TransitStation;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -56,6 +58,22 @@ public class TmapStationClient {
         } catch (CustomException e) {
             throw e;
 
+        } catch (RestClientResponseException e) {
+            if (isEmptySearchResponse(e)) {
+                return List.of();
+            }
+
+            log.error(
+                    "TMAP 주변 역 검색 HTTP 오류 발생. status={}, body={}",
+                    e.getStatusCode(),
+                    e.getResponseBodyAsString(),
+                    e
+            );
+
+            throw new CustomException(
+                    ErrorCode.STATION_SEARCH_FAILED
+            );
+
         } catch (Exception e) {
             log.error("TMAP 주변 역 검색 처리 중 오류 발생", e);
             throw new CustomException(
@@ -90,9 +108,23 @@ public class TmapStationClient {
                             buildRequest(),
                             String.class
                     );
+            String responseBody =
+                    response.getBody();
+
+            if (!StringUtils.hasText(responseBody)) {
+                break;
+            }
+
+            JsonNode payload =
+                    objectMapper.readTree(responseBody);
+
+            if (hasNoPois(payload)) {
+                break;
+            }
+
             TmapPlaceSearchResponse tmapResponse =
-                    objectMapper.readValue(
-                            response.getBody(),
+                    objectMapper.treeToValue(
+                            payload,
                             TmapPlaceSearchResponse.class
                     );
 
@@ -363,6 +395,88 @@ public class TmapStationClient {
 
         } catch (NumberFormatException e) {
             return 0;
+        }
+    }
+
+    private boolean hasNoPois(
+            JsonNode payload
+    ) {
+        JsonNode searchPoiInfo =
+                payload == null
+                        ? null
+                        : payload.get("searchPoiInfo");
+
+        if (searchPoiInfo == null || searchPoiInfo.isNull()) {
+            return true;
+        }
+
+        int totalCount =
+                safeInt(
+                        searchPoiInfo.path("totalCount").asText(),
+                        0
+                );
+
+        if (totalCount == 0) {
+            return true;
+        }
+
+        JsonNode pois =
+                searchPoiInfo.get("pois");
+
+        if (pois == null || pois.isNull()) {
+            return true;
+        }
+
+        if (pois.isTextual()) {
+            return !StringUtils.hasText(pois.asText());
+        }
+
+        JsonNode poi =
+                pois.get("poi");
+
+        if (poi == null || poi.isNull()) {
+            return true;
+        }
+
+        return poi.isTextual()
+                && !StringUtils.hasText(poi.asText());
+    }
+
+    private boolean isEmptySearchResponse(
+            RestClientResponseException e
+    ) {
+        int statusCode =
+                e.getStatusCode().value();
+
+        if (statusCode != 400 && statusCode != 404) {
+            return false;
+        }
+
+        String body =
+                e.getResponseBodyAsString();
+
+        return !StringUtils.hasText(body)
+                || body.contains("NO_RESULT")
+                || body.contains("no result")
+                || body.contains("not found")
+                || body.contains("검색 결과")
+                || body.contains("결과가 없습니다")
+                || body.contains("결과 없음");
+    }
+
+    private int safeInt(
+            String value,
+            int defaultValue
+    ) {
+        if (!StringUtils.hasText(value)) {
+            return defaultValue;
+        }
+
+        try {
+            return Integer.parseInt(value.trim());
+
+        } catch (NumberFormatException e) {
+            return defaultValue;
         }
     }
 
