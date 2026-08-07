@@ -7,8 +7,9 @@ import com.gilbeot.gilbut.domain.home.HomePlace;
 import com.gilbeot.gilbut.domain.user.User;
 import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
-import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
+import com.gilbeot.gilbut.dto.chat.request.TodayConditionConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.DepartureTimeConfirmationRequest;
+import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.repository.ChatSessionRepository;
@@ -255,6 +256,29 @@ public class ChatSessionService {
 
         session.confirmDepartureTime(
                 departureDateTime
+        );
+
+        return ChatSessionResponse.from(session);
+    }
+
+    @Transactional
+    public ChatSessionResponse confirmTodayCondition(
+            Long userId,
+            TodayConditionConfirmationRequest request
+    ) {
+        ChatSession session =
+                getOrCreateSessionEntity(userId);
+
+        if (session.getCurrentState()
+                != ChatState.TODAY_CONDITION_CONFIRMATION) {
+
+            throw new CustomException(
+                    ErrorCode.CHAT_STATE_CONFLICT
+            );
+        }
+
+        session.confirmTodayCondition(
+                request.getTodayCondition()
         );
 
         return ChatSessionResponse.from(session);

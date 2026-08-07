@@ -141,6 +141,13 @@ public class ChatSession extends BaseEntity {
     @Column(name = "departure_datetime")
     private LocalDateTime departureDateTime;
 
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "today_condition",
+            length = 30
+    )
+    private TodayCondition todayCondition;
+
     public static ChatSession create(User user) {
         return ChatSession.builder()
                 .user(user)
@@ -246,6 +253,7 @@ public class ChatSession extends BaseEntity {
 
     private void clearRouteContext() {
         this.departureDateTime = null;
+        this.todayCondition = null;
         this.selectedRouteId = null;
         this.activeRequestId = null;
     }
@@ -256,5 +264,12 @@ public class ChatSession extends BaseEntity {
         this.departureDateTime = departureDateTime;
         this.currentState =
                 ChatState.TODAY_CONDITION_CONFIRMATION;
+    }
+
+    public void confirmTodayCondition(
+            TodayCondition todayCondition
+    ) {
+        this.todayCondition = todayCondition;
+        this.currentState = ChatState.ROUTE_CALCULATING;
     }
 }

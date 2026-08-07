@@ -3,9 +3,10 @@ package com.gilbeot.gilbut.controller;
 import com.gilbeot.gilbut.dto.chat.request.ChatMessageRequest;
 import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.DepartureTimeConfirmationRequest;
+import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
+import com.gilbeot.gilbut.dto.chat.request.TodayConditionConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatMessageResponse;
 import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
-import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
 import com.gilbeot.gilbut.global.common.api.ApiResponse;
 import com.gilbeot.gilbut.global.common.code.SuccessCode;
 import com.gilbeot.gilbut.service.chat.ChatService;
@@ -119,6 +120,28 @@ public class ChatController {
 
         ChatSessionResponse response =
                 chatService.confirmDepartureTime(
+                        userId,
+                        request
+                );
+
+        return ApiResponse.success(
+                SuccessCode._OK,
+                response
+        );
+    }
+
+    @PostMapping("/today-condition-confirmation")
+    public ResponseEntity<ApiResponse<ChatSessionResponse>>
+    confirmTodayCondition(
+            Authentication authentication,
+            @Valid @RequestBody
+            TodayConditionConfirmationRequest request
+    ) {
+        Long userId =
+                extractUserId(authentication);
+
+        ChatSessionResponse response =
+                chatService.confirmTodayCondition(
                         userId,
                         request
                 );
