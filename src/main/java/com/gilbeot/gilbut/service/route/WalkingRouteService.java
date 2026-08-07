@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.gilbeot.gilbut.client.tmap.TmapWalkingRouteClient;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteRequest;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteResponse;
+import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
 import com.gilbeot.gilbut.dto.route.walking.response.RoutePointResponse;
+import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteSummaryResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingStepResponse;
@@ -16,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -26,6 +30,18 @@ public class WalkingRouteService {
 
     private static final String DEFAULT_ORIGIN_NAME = "출발지";
     private static final String DEFAULT_DESTINATION_NAME = "목적지";
+    private static final WalkingRouteSearchOption DEFAULT_OPTION =
+            new WalkingRouteSearchOption(
+                    WalkingRouteOption.DEFAULT,
+                    "walking-",
+                    "0"
+            );
+    private static final WalkingRouteSearchOption AVOID_STAIRS_OPTION =
+            new WalkingRouteSearchOption(
+                    WalkingRouteOption.AVOID_STAIRS,
+                    "walking-avoid-stairs-",
+                    "30"
+            );
 
     private final TmapWalkingRouteClient tmapWalkingRouteClient;
 
@@ -34,16 +50,101 @@ public class WalkingRouteService {
     ) {
         validateRequest(request);
 
-        TmapWalkingRouteResponse tmapResponse =
-                tmapWalkingRouteClient.search(
-                        toTmapRequest(request)
+        List<WalkingRouteItemResponse> routes =
+                new ArrayList<>();
+
+        resolveSearchOptions(request)
+                .forEach(option ->
+                        addRouteIfAvailable(
+                                request,
+                                option,
+                                routes
+                        )
                 );
 
-        return toResponse(tmapResponse);
+        if (routes.isEmpty()) {
+            throw new CustomException(ErrorCode.ROUTE_SEARCH_FAILED);
+        }
+
+        return WalkingRouteResponse.builder()
+                .routes(routes)
+                .build();
+    }
+
+    private List<WalkingRouteSearchOption> resolveSearchOptions(
+            WalkingRouteRequest request
+    ) {
+        List<WalkingRouteOption> routeOptions =
+                request.getRouteOptions();
+
+        if (routeOptions == null) {
+            return List.of(
+                    DEFAULT_OPTION,
+                    AVOID_STAIRS_OPTION
+            );
+        }
+
+        if (routeOptions.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Set<WalkingRouteOption> uniqueOptions =
+                new LinkedHashSet<>();
+
+        for (WalkingRouteOption routeOption : routeOptions) {
+            if (routeOption == null) {
+                throw new CustomException(ErrorCode.INVALID_REQUEST);
+            }
+
+            uniqueOptions.add(routeOption);
+        }
+
+        return uniqueOptions.stream()
+                .map(this::toSearchOption)
+                .toList();
+    }
+
+    private WalkingRouteSearchOption toSearchOption(
+            WalkingRouteOption routeOption
+    ) {
+        return switch (routeOption) {
+            case DEFAULT -> DEFAULT_OPTION;
+            case AVOID_STAIRS -> AVOID_STAIRS_OPTION;
+        };
+    }
+
+    private void addRouteIfAvailable(
+            WalkingRouteRequest request,
+            WalkingRouteSearchOption option,
+            List<WalkingRouteItemResponse> routes
+    ) {
+        try {
+            TmapWalkingRouteResponse tmapResponse =
+                    tmapWalkingRouteClient.search(
+                            toTmapRequest(
+                                    request,
+                                    option.searchOption()
+                            )
+                    );
+
+            routes.add(
+                    toRouteItem(
+                            tmapResponse,
+                            option
+                    )
+            );
+
+        } catch (CustomException e) {
+            if (e.getErrorCode()
+                    != ErrorCode.ROUTE_SEARCH_FAILED) {
+                throw e;
+            }
+        }
     }
 
     private TmapWalkingRouteRequest toTmapRequest(
-            WalkingRouteRequest request
+            WalkingRouteRequest request,
+            String searchOption
     ) {
         WalkingRouteRequest.RoutePlaceRequest origin =
                 request.getOrigin();
@@ -69,12 +170,13 @@ public class WalkingRouteService {
                                 DEFAULT_DESTINATION_NAME
                         )
                 )
-                .searchOption("0")
+                .searchOption(searchOption)
                 .build();
     }
 
-    private WalkingRouteResponse toResponse(
-            TmapWalkingRouteResponse response
+    private WalkingRouteItemResponse toRouteItem(
+            TmapWalkingRouteResponse response,
+            WalkingRouteSearchOption option
     ) {
         if (response == null || response.getFeatures() == null) {
             throw new CustomException(ErrorCode.ROUTE_SEARCH_FAILED);
@@ -89,8 +191,9 @@ public class WalkingRouteService {
             throw new CustomException(ErrorCode.ROUTE_SEARCH_FAILED);
         }
 
-        return WalkingRouteResponse.builder()
-                .routeId(generateRouteId())
+        return WalkingRouteItemResponse.builder()
+                .routeId(generateRouteId(option.routeIdPrefix()))
+                .routeOption(option.routeOption())
                 .summary(
                         WalkingRouteSummaryResponse.builder()
                                 .totalDistanceM(
@@ -383,8 +486,17 @@ public class WalkingRouteService {
                 : null;
     }
 
-    private String generateRouteId() {
-        return "walking-" + UUID.randomUUID();
+    private String generateRouteId(
+            String prefix
+    ) {
+        return prefix + UUID.randomUUID();
+    }
+
+    private record WalkingRouteSearchOption(
+            WalkingRouteOption routeOption,
+            String routeIdPrefix,
+            String searchOption
+    ) {
     }
 
     private record PendingInstruction(

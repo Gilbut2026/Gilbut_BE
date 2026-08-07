@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gilbeot.gilbut.client.tmap.TmapWalkingRouteClient;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteRequest;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteResponse;
+import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
+import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
@@ -21,6 +23,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -44,67 +47,87 @@ class WalkingRouteServiceTest {
     }
 
     @Test
-    @DisplayName("TMAP 보행자 응답을 보행 경로 조회 응답으로 변환한다")
+    @DisplayName("기본 보행 경로와 계단 회피 보행 경로를 조회한다")
     void searchWalkingRoute() throws Exception {
         when(
                 tmapWalkingRouteClient.search(any())
-        ).thenReturn(tmapResponse());
+        ).thenReturn(
+                tmapResponse(),
+                tmapResponse()
+        );
 
         WalkingRouteResponse response =
                 walkingRouteService.search(
                         walkingRouteRequest()
                 );
 
-        assertThat(response.getRouteId())
+        assertThat(response.getRoutes())
+                .hasSize(2);
+
+        WalkingRouteItemResponse defaultRoute =
+                response.getRoutes().get(0);
+        WalkingRouteItemResponse avoidStairsRoute =
+                response.getRoutes().get(1);
+
+        assertThat(defaultRoute.getRouteId())
                 .startsWith("walking-");
 
-        assertThat(response.getSummary().getTotalDistanceM())
+        assertThat(defaultRoute.getRouteOption())
+                .isEqualTo(WalkingRouteOption.DEFAULT);
+
+        assertThat(defaultRoute.getSummary().getTotalDistanceM())
                 .isEqualTo(70);
 
-        assertThat(response.getSummary().getTotalTimeSec())
+        assertThat(defaultRoute.getSummary().getTotalTimeSec())
                 .isEqualTo(80);
 
-        assertThat(response.getRoutePoints())
+        assertThat(defaultRoute.getRoutePoints())
                 .hasSize(3);
 
         assertThat(
-                response.getRoutePoints()
+                defaultRoute.getRoutePoints()
                         .get(0)
                         .getLatitude()
         ).isEqualTo(37.265714);
 
         assertThat(
-                response.getRoutePoints()
+                defaultRoute.getRoutePoints()
                         .get(0)
                         .getLongitude()
         ).isEqualTo(126.999958);
 
-        assertThat(response.getSteps())
+        assertThat(defaultRoute.getSteps())
                 .hasSize(2);
 
         assertThat(
-                response.getSteps()
+                defaultRoute.getSteps()
                         .get(0)
                         .getInstruction()
         ).isEqualTo("출발지");
 
         assertThat(
-                response.getSteps()
+                defaultRoute.getSteps()
                         .get(0)
                         .getDistanceM()
         ).isEqualTo(35);
 
         assertThat(
-                response.getSteps()
+                defaultRoute.getSteps()
                         .get(1)
                         .getInstruction()
         ).isEqualTo("우회전");
 
         assertThat(
-                response.getSteps()
+                defaultRoute.getSteps()
                         .get(1)
                         .getTurnType()
         ).isEqualTo(13);
+
+        assertThat(avoidStairsRoute.getRouteId())
+                .startsWith("walking-avoid-stairs-");
+
+        assertThat(avoidStairsRoute.getRouteOption())
+                .isEqualTo(WalkingRouteOption.AVOID_STAIRS);
 
         ArgumentCaptor<TmapWalkingRouteRequest> captor =
                 ArgumentCaptor.forClass(
@@ -112,11 +135,12 @@ class WalkingRouteServiceTest {
                 );
 
         verify(
-                tmapWalkingRouteClient
+                tmapWalkingRouteClient,
+                times(2)
         ).search(captor.capture());
 
         TmapWalkingRouteRequest tmapRequest =
-                captor.getValue();
+                captor.getAllValues().get(0);
 
         assertThat(tmapRequest.getStartX())
                 .isEqualTo(127.0286);
@@ -135,6 +159,148 @@ class WalkingRouteServiceTest {
 
         assertThat(tmapRequest.getEndName())
                 .isEqualTo("광교중앙역");
+
+        assertThat(captor.getAllValues())
+                .extracting(
+                        TmapWalkingRouteRequest::getSearchOption
+                )
+                .containsExactly(
+                        "0",
+                        "30"
+                );
+    }
+
+    @Test
+    @DisplayName("계단 회피 보행 경로 조회가 실패하면 기본 보행 경로만 반환한다")
+    void searchWalkingRouteWhenAvoidStairsRouteFails()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(
+                tmapResponse()
+        ).thenThrow(
+                new CustomException(
+                        ErrorCode.ROUTE_SEARCH_FAILED
+                )
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(
+                        walkingRouteRequest()
+                );
+
+        assertThat(response.getRoutes())
+                .hasSize(1);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteOption()
+        ).isEqualTo(WalkingRouteOption.DEFAULT);
+    }
+
+    @Test
+    @DisplayName("기본 보행 경로 옵션만 요청하면 기본 보행 경로만 조회한다")
+    void searchWalkingRouteWithDefaultOptionOnly()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(tmapResponse());
+
+        WalkingRouteRequest request =
+                walkingRouteRequest();
+
+        request.setRouteOptions(
+                List.of(WalkingRouteOption.DEFAULT)
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(request);
+
+        assertThat(response.getRoutes())
+                .hasSize(1);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteOption()
+        ).isEqualTo(WalkingRouteOption.DEFAULT);
+
+        ArgumentCaptor<TmapWalkingRouteRequest> captor =
+                ArgumentCaptor.forClass(
+                        TmapWalkingRouteRequest.class
+                );
+
+        verify(
+                tmapWalkingRouteClient
+        ).search(captor.capture());
+
+        assertThat(captor.getValue().getSearchOption())
+                .isEqualTo("0");
+    }
+
+    @Test
+    @DisplayName("계단 회피 보행 경로 옵션만 요청하면 계단 회피 경로만 조회한다")
+    void searchWalkingRouteWithAvoidStairsOptionOnly()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(tmapResponse());
+
+        WalkingRouteRequest request =
+                walkingRouteRequest();
+
+        request.setRouteOptions(
+                List.of(WalkingRouteOption.AVOID_STAIRS)
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(request);
+
+        assertThat(response.getRoutes())
+                .hasSize(1);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteOption()
+        ).isEqualTo(WalkingRouteOption.AVOID_STAIRS);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteId()
+        ).startsWith("walking-avoid-stairs-");
+
+        ArgumentCaptor<TmapWalkingRouteRequest> captor =
+                ArgumentCaptor.forClass(
+                        TmapWalkingRouteRequest.class
+                );
+
+        verify(
+                tmapWalkingRouteClient
+        ).search(captor.capture());
+
+        assertThat(captor.getValue().getSearchOption())
+                .isEqualTo("30");
+    }
+
+    @Test
+    @DisplayName("빈 경로 옵션 요청은 INVALID_REQUEST로 처리한다")
+    void emptyRouteOptions() {
+        WalkingRouteRequest request =
+                walkingRouteRequest();
+
+        request.setRouteOptions(List.of());
+
+        assertThatThrownBy(() ->
+                walkingRouteService.search(request)
+        )
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_REQUEST);
+
+        verifyNoInteractions(tmapWalkingRouteClient);
     }
 
     @Test
