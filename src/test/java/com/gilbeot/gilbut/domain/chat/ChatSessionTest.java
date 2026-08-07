@@ -3,7 +3,7 @@ package com.gilbeot.gilbut.domain.chat;
 import com.gilbeot.gilbut.domain.user.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
+import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ChatSessionTest {
@@ -112,4 +112,6 @@ class ChatSessionTest {
         assertThat(session.getSelectedRouteId())
                 .isNull();
     }
+
+
 }

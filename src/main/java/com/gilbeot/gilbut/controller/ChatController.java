@@ -1,7 +1,9 @@
 package com.gilbeot.gilbut.controller;
 
 import com.gilbeot.gilbut.dto.chat.request.ChatMessageRequest;
+import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatMessageResponse;
+import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
 import com.gilbeot.gilbut.global.common.api.ApiResponse;
 import com.gilbeot.gilbut.global.common.code.SuccessCode;
 import com.gilbeot.gilbut.service.chat.ChatService;
@@ -22,18 +24,33 @@ public class ChatController {
     private final ChatService chatService;
 
     @PostMapping
-    public ResponseEntity<
-            ApiResponse<ChatMessageResponse>>
-    chat(
+    public ResponseEntity<ApiResponse<ChatMessageResponse>> chat(
             Authentication authentication,
-            @Valid @RequestBody
-            ChatMessageRequest request
+            @Valid @RequestBody ChatMessageRequest request
     ) {
-        Long userId =
-                extractUserId(authentication);
+        Long userId = extractUserId(authentication);
 
         ChatMessageResponse response =
                 chatService.chat(
+                        userId,
+                        request
+                );
+
+        return ApiResponse.success(
+                SuccessCode._OK,
+                response
+        );
+    }
+
+    @PostMapping("/place-confirmation")
+    public ResponseEntity<ApiResponse<ChatSessionResponse>> confirmDestination(
+            Authentication authentication,
+            @Valid @RequestBody PlaceConfirmationRequest request
+    ) {
+        Long userId = extractUserId(authentication);
+
+        ChatSessionResponse response =
+                chatService.confirmDestination(
                         userId,
                         request
                 );

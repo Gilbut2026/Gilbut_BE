@@ -7,6 +7,7 @@ import com.gilbeot.gilbut.domain.chat.ChatAction;
 import com.gilbeot.gilbut.domain.chat.ChatIntent;
 import com.gilbeot.gilbut.domain.chat.ChatResponseType;
 import com.gilbeot.gilbut.domain.chat.ChatState;
+import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.ChatMessageRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatMessageResponse;
 import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
@@ -63,6 +64,16 @@ public class ChatService {
             case OUT_OF_SCOPE ->
                     handleOutOfScope(session);
         };
+    }
+
+    public ChatSessionResponse confirmDestination(
+            Long userId,
+            PlaceConfirmationRequest request
+    ) {
+        return chatSessionService.confirmDestination(
+                userId,
+                request
+        );
     }
 
     private ChatMessageResponse handleSearchDestination(
