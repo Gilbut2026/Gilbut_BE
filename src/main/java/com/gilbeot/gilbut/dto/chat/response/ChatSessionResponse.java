@@ -3,9 +3,10 @@ package com.gilbeot.gilbut.dto.chat.response;
 import com.gilbeot.gilbut.domain.chat.ChatSession;
 import com.gilbeot.gilbut.domain.chat.ChatState;
 import com.gilbeot.gilbut.domain.chat.OriginType;
+import com.gilbeot.gilbut.domain.chat.TodayCondition;
 import lombok.Builder;
 import lombok.Getter;
-
+import java.time.LocalDateTime;
 @Getter
 @Builder
 public class ChatSessionResponse {
@@ -24,6 +25,10 @@ public class ChatSessionResponse {
 
     private String activeRequestId;
 
+    private LocalDateTime departureDateTime;
+
+    private TodayCondition todayCondition;
+
     public static ChatSessionResponse from(ChatSession session) {
         return ChatSessionResponse.builder()
                 .sessionId(session.getSessionId())
@@ -33,6 +38,10 @@ public class ChatSessionResponse {
                 .origin(createOrigin(session))
                 .selectedRouteId(session.getSelectedRouteId())
                 .activeRequestId(session.getActiveRequestId())
+                .departureDateTime(
+                        session.getDepartureDateTime()
+                )
+                .todayCondition(session.getTodayCondition())
                 .build();
     }
 
