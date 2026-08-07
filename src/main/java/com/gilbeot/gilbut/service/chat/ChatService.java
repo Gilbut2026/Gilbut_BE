@@ -7,6 +7,7 @@ import com.gilbeot.gilbut.domain.chat.ChatAction;
 import com.gilbeot.gilbut.domain.chat.ChatIntent;
 import com.gilbeot.gilbut.domain.chat.ChatResponseType;
 import com.gilbeot.gilbut.domain.chat.ChatState;
+import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.ChatMessageRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatMessageResponse;
@@ -71,6 +72,16 @@ public class ChatService {
             PlaceConfirmationRequest request
     ) {
         return chatSessionService.confirmDestination(
+                userId,
+                request
+        );
+    }
+
+    public ChatSessionResponse confirmOrigin(
+            Long userId,
+            OriginConfirmationRequest request
+    ) {
+        return chatSessionService.confirmOrigin(
                 userId,
                 request
         );

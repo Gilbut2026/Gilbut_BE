@@ -95,6 +95,13 @@ public class ChatSession extends BaseEntity {
     @Column(name = "destination_longitude")
     private Double destinationLongitude;
 
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "origin_type",
+            length = 30
+    )
+    private OriginType originType;
+
     @Column(
             name = "origin_place_id",
             length = 100
@@ -167,12 +174,14 @@ public class ChatSession extends BaseEntity {
     }
 
     public void confirmOrigin(
+            OriginType originType,
             String placeId,
             String name,
             String address,
             Double latitude,
             Double longitude
     ) {
+        this.originType = originType;
         this.originPlaceId = placeId;
         this.originName = name;
         this.originAddress = address;
@@ -188,6 +197,11 @@ public class ChatSession extends BaseEntity {
 
     public void completeRouteCalculation() {
         this.currentState = ChatState.RESULT_PRESENTATION;
+    }
+
+    public void moveToDepartureTimeConfirmation() {
+        this.currentState =
+                ChatState.DEPARTURE_TIME_CONFIRMATION;
     }
 
     public void startNavigation(String routeId) {
@@ -219,6 +233,7 @@ public class ChatSession extends BaseEntity {
     }
 
     private void clearOrigin() {
+        this.originType = null;
         this.originPlaceId = null;
         this.originName = null;
         this.originAddress = null;
