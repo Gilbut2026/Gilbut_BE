@@ -63,6 +63,16 @@ public enum ErrorCode implements BaseCode {
             "장소 검색에 실패했습니다."
     ),
 
+    STATION_SEARCH_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "주변 역 검색에 실패했습니다."
+    ),
+
+    ELEVATOR_SEARCH_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "역사 내 승강기 조회에 실패했습니다."
+    ),
+
     AI_SERVER_UNAVAILABLE(
             HttpStatus.SERVICE_UNAVAILABLE,
             "AI 서버를 사용할 수 없습니다."
