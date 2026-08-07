@@ -9,8 +9,5 @@ import java.util.List;
 @Builder
 public class WalkingRouteResponse {
 
-    private String routeId;
-    private WalkingRouteSummaryResponse summary;
-    private List<RoutePointResponse> routePoints;
-    private List<WalkingStepResponse> steps;
+    private List<WalkingRouteItemResponse> routes;
 }

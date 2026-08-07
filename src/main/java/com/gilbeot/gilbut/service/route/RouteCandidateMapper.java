@@ -6,30 +6,61 @@ import com.gilbeot.gilbut.dto.route.RouteMetrics;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteSummaryResponse;
+import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteSummaryResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class RouteCandidateMapper {
 
-    public RouteCandidate fromWalkingRoute(
+    public List<RouteCandidate> fromWalkingRoutes(
             WalkingRouteResponse response
     ) {
         if (response == null
-                || response.getRouteId() == null
-                || response.getSummary() == null) {
+                || response.getRoutes() == null
+                || response.getRoutes().isEmpty()) {
+            throw new CustomException(
+                    ErrorCode.ROUTE_SEARCH_FAILED
+            );
+        }
+
+        List<RouteCandidate> candidates =
+                new ArrayList<>();
+
+        for (int index = 0;
+             index < response.getRoutes().size();
+             index++) {
+            candidates.add(
+                    fromWalkingRoute(
+                            response.getRoutes().get(index),
+                            index + 1
+                    )
+            );
+        }
+
+        return candidates;
+    }
+
+    private RouteCandidate fromWalkingRoute(
+            WalkingRouteItemResponse route,
+            int providerRank
+    ) {
+        if (route == null
+                || route.getRouteId() == null
+                || route.getSummary() == null) {
             throw new CustomException(
                     ErrorCode.ROUTE_SEARCH_FAILED
             );
         }
 
         WalkingRouteSummaryResponse summary =
-                response.getSummary();
+                route.getSummary();
 
         if (summary.getTotalTimeSec() == null
                 || summary.getTotalDistanceM() == null) {
@@ -39,9 +70,9 @@ public class RouteCandidateMapper {
         }
 
         return RouteCandidate.builder()
-                .routeId(response.getRouteId())
+                .routeId(route.getRouteId())
                 .routeType(RouteType.WALKING)
-                .providerRank(1)
+                .providerRank(providerRank)
                 .metrics(
                         RouteMetrics.builder()
                                 .totalTimeSec(

@@ -1,5 +1,6 @@
 package com.gilbeot.gilbut.dto.route.walking.request;
 
+import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -8,6 +9,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -21,6 +24,8 @@ public class WalkingRouteRequest {
     @Valid
     @NotNull
     private RoutePlaceRequest destination;
+
+    private List<WalkingRouteOption> routeOptions;
 
     @Getter
     @Setter
