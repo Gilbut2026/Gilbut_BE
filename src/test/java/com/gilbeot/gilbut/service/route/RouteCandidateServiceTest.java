@@ -5,6 +5,7 @@ import com.gilbeot.gilbut.client.tmap.dto.transit.TmapTransitRouteRequest;
 import com.gilbeot.gilbut.client.tmap.dto.transit.TmapTransitRouteResponse;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
+import com.gilbeot.gilbut.domain.route.RouteType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -110,7 +111,13 @@ class RouteCandidateServiceTest {
                 result.getCandidates()
                         .get(0)
                         .getRouteId()
-        ).isEqualTo("route-1");
+        ).isEqualTo("transit-1");
+
+        assertThat(
+                result.getCandidates()
+                        .get(0)
+                        .getRouteType()
+        ).isEqualTo(RouteType.TRANSIT);
 
         assertThat(
                 result.getCandidates()

@@ -7,6 +7,7 @@ import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteMetrics;
+import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -108,7 +109,8 @@ public class RouteCandidateService {
 
             candidates.add(
                     RouteCandidate.builder()
-                            .routeId("route-" + rank)
+                            .routeId("transit-" + rank)
+                            .routeType(RouteType.TRANSIT)
                             .providerRank(rank)
                             .metrics(
                                     RouteMetrics.builder()
