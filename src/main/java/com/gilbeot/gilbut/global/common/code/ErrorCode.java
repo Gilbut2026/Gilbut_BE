@@ -61,6 +61,26 @@ public enum ErrorCode implements BaseCode {
     PLACE_SEARCH_FAILED(
             HttpStatus.BAD_GATEWAY,
             "장소 검색에 실패했습니다."
+    ),
+
+    AI_SERVER_UNAVAILABLE(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "AI 서버를 사용할 수 없습니다."
+    ),
+
+    AI_CHAT_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "AI 서버 요청에 실패했습니다."
+    ),
+
+    AI_CHAT_RESPONSE_INVALID(
+            HttpStatus.BAD_GATEWAY,
+            "AI 서버의 응답 형식이 올바르지 않습니다."
+    ),
+
+    CHAT_STATE_CONFLICT(
+            HttpStatus.CONFLICT,
+            "현재 대화 상태에서 처리할 수 없는 요청입니다."
     );
 
     private final HttpStatus status;
