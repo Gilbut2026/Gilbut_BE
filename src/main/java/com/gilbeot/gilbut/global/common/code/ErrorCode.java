@@ -93,6 +93,16 @@ public enum ErrorCode implements BaseCode {
             "AI 서버의 응답 형식이 올바르지 않습니다."
     ),
 
+    AI_ROUTE_SCORING_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "AI 경로 스코어링 요청에 실패했습니다."
+    ),
+
+    AI_ROUTE_SCORING_RESPONSE_INVALID(
+            HttpStatus.BAD_GATEWAY,
+            "AI 경로 스코어링 응답 형식이 올바르지 않습니다."
+    ),
+
     CHAT_STATE_CONFLICT(
             HttpStatus.CONFLICT,
             "현재 대화 상태에서 처리할 수 없는 요청입니다."
