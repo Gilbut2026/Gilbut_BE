@@ -53,6 +53,7 @@ public class RouteCandidateMapper {
     ) {
         if (route == null
                 || route.getRouteId() == null
+                || route.getRouteOption() == null
                 || route.getSummary() == null) {
             throw new CustomException(
                     ErrorCode.ROUTE_SEARCH_FAILED
@@ -72,6 +73,7 @@ public class RouteCandidateMapper {
         return RouteCandidate.builder()
                 .routeId(route.getRouteId())
                 .routeType(RouteType.WALKING)
+                .routeOption(route.getRouteOption())
                 .providerRank(providerRank)
                 .metrics(
                         RouteMetrics.builder()
