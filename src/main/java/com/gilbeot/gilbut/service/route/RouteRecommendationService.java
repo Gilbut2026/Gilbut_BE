@@ -197,6 +197,9 @@ public class RouteRecommendationService {
                                         .scoreBreakdown(
                                                 result.getScoreBreakdown()
                                         )
+                                        .slopeSummary(
+                                                result.getSlopeSummary()
+                                        )
                                         .build()
                         )
                         .toList();

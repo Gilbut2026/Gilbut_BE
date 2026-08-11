@@ -13,4 +13,5 @@ public class RouteRecommendationItem {
     private Double score;
     private Integer rank;
     private AiRouteScoringResponse.ScoreBreakdown scoreBreakdown;
+    private AiRouteScoringResponse.SlopeSummary slopeSummary;
 }

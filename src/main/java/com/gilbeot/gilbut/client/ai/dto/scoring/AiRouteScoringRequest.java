@@ -59,8 +59,21 @@ public class AiRouteScoringRequest {
     @Builder
     public static class WalkSegment {
 
+        private String walkSegmentId;
+        private String role;
         private SegmentScope segmentScope;
+        private Integer distanceM;
+        private Integer durationSec;
+        private Geometry geometry;
         private AccessibilitySignals accessibilitySignals;
+    }
+
+    @Getter
+    @Builder
+    public static class Geometry {
+
+        private String type;
+        private List<List<Double>> coordinates;
     }
 
     @Getter
