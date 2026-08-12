@@ -92,7 +92,6 @@ public class RouteRecommendationService {
                 || scoringResponse.getRequestId() == null
                 || !candidateResult.getRequestId()
                 .equals(scoringResponse.getRequestId())) {
-
             throw new CustomException(
                     ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
             );
@@ -113,9 +112,7 @@ public class RouteRecommendationService {
         Set<String> candidateRouteIds =
                 candidateResult.getCandidates()
                         .stream()
-                        .map(
-                                RouteCandidate::getRouteId
-                        )
+                        .map(RouteCandidate::getRouteId)
                         .collect(
                                 HashSet::new,
                                 Set::add,
@@ -137,7 +134,6 @@ public class RouteRecommendationService {
                     || !responseRouteIds.add(
                     result.getRouteId()
             )) {
-
                 throw new CustomException(
                         ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
                 );
@@ -147,7 +143,6 @@ public class RouteRecommendationService {
                     == ScoringResultStatus.SCORED
                     && (result.getScore() == null
                     || result.getRank() == null)) {
-
                 throw new CustomException(
                         ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
                 );
@@ -166,11 +161,9 @@ public class RouteRecommendationService {
                 && scoringResponse.getDrtDecision()
                 .getBasedOnRouteId() != null
                 && !candidateRouteIds.contains(
-                scoringResponse
-                        .getDrtDecision()
+                scoringResponse.getDrtDecision()
                         .getBasedOnRouteId()
         )) {
-
             throw new CustomException(
                     ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
             );
@@ -187,7 +180,6 @@ public class RouteRecommendationService {
 
         for (RouteCandidate candidate
                 : candidateResult.getCandidates()) {
-
             candidateMap.put(
                     candidate.getRouteId(),
                     candidate
@@ -197,58 +189,52 @@ public class RouteRecommendationService {
         List<RouteRecommendationItem> recommendations =
                 scoringResponse.getResults()
                         .stream()
-                        .filter(
-                                result ->
-                                        result.getStatus()
-                                                == ScoringResultStatus.SCORED
+                        .filter(result ->
+                                result.getStatus()
+                                        == ScoringResultStatus.SCORED
                         )
-                        .sorted(
-                                (first, second) ->
-                                        Integer.compare(
-                                                first.getRank(),
-                                                second.getRank()
+                        .sorted((first, second) ->
+                                Integer.compare(
+                                        first.getRank(),
+                                        second.getRank()
+                                )
+                        )
+                        .map(result ->
+                                RouteRecommendationItem.builder()
+                                        .routeId(
+                                                result.getRouteId()
                                         )
-                        )
-                        .map(
-                                result ->
-                                        RouteRecommendationItem
-                                                .builder()
-                                                .routeId(
+                                        .candidate(
+                                                candidateMap.get(
                                                         result.getRouteId()
                                                 )
-                                                .candidate(
-                                                        candidateMap.get(
-                                                                result.getRouteId()
-                                                        )
-                                                )
-                                                .score(
-                                                        result.getScore()
-                                                )
-                                                .rank(
-                                                        result.getRank()
-                                                )
-                                                .scoreBreakdown(
-                                                        result.getScoreBreakdown()
-                                                )
-                                                .slopeSummary(
-                                                        result.getSlopeSummary()
-                                                )
-                                                .build()
+                                        )
+                                        .score(
+                                                result.getScore()
+                                        )
+                                        .rank(
+                                                result.getRank()
+                                        )
+                                        .scoreBreakdown(
+                                                result.getScoreBreakdown()
+                                        )
+                                        .slopeSummary(
+                                                result.getSlopeSummary()
+                                        )
+                                        .build()
                         )
                         .toList();
 
         List<AiRouteScoringResponse.Result> filteredResults =
                 scoringResponse.getResults()
                         .stream()
-                        .filter(
-                                result ->
-                                        result.getStatus()
-                                                == ScoringResultStatus.FILTERED
+                        .filter(result ->
+                                result.getStatus()
+                                        == ScoringResultStatus.FILTERED
                         )
                         .toList();
 
-        return RouteRecommendationResult
-                .builder()
+        return RouteRecommendationResult.builder()
                 .requestId(
                         candidateResult.getRequestId()
                 )
