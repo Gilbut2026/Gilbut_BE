@@ -1,7 +1,9 @@
 package com.gilbeot.gilbut.controller;
 
 import com.gilbeot.gilbut.dto.route.walking.request.NavigationRerouteRequest;
+import com.gilbeot.gilbut.dto.route.walking.request.RestStopRerouteRequest;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
+import com.gilbeot.gilbut.dto.route.walking.response.RestStopRerouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.global.common.api.ApiResponse;
 import com.gilbeot.gilbut.global.common.code.SuccessCode;
@@ -44,6 +46,22 @@ public class RouteController {
     ) {
         WalkingRouteResponse response =
                 walkingRerouteService.reroute(request);
+
+        return ApiResponse.success(
+                SuccessCode._OK,
+                response
+        );
+    }
+
+    @PostMapping("/walking/rest-stop-reroute")
+    public ResponseEntity<ApiResponse<RestStopRerouteResponse>>
+    rerouteWalkingRouteViaRestStop(
+            @Valid @RequestBody RestStopRerouteRequest request
+    ) {
+        RestStopRerouteResponse response =
+                walkingRerouteService.rerouteViaRestStop(
+                        request
+                );
 
         return ApiResponse.success(
                 SuccessCode._OK,
