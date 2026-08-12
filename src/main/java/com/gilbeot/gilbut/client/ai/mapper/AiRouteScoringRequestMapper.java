@@ -35,6 +35,7 @@ public class AiRouteScoringRequestMapper {
         return AiRouteScoringRequest.UserContext.builder()
                 .walkingDuration(profile.getWalkingDuration())
                 .stairLevel(profile.getStairLevel())
+                .slopeLevel(profile.getSlopeLevel())
                 .restStopPreference(profile.getRestStopPreference())
                 .transferLevel(profile.getTransferLevel())
                 .mobilityAid(profile.getMobilityAid())
@@ -84,6 +85,7 @@ public class AiRouteScoringRequestMapper {
         if (geometry == null) {
             return null;
         }
+
         return AiRouteScoringRequest.Geometry.builder()
                 .type(geometry.getType())
                 .coordinates(geometry.getCoordinates())

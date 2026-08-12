@@ -5,6 +5,7 @@ import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
+import com.gilbeot.gilbut.domain.user.type.SlopeLevel;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
@@ -35,6 +36,9 @@ class AiRouteScoringRequestMapperTest {
                         )
                         .stairLevel(
                                 StairLevel.SLIGHTLY_DIFFICULT
+                        )
+                        .slopeLevel(
+                                SlopeLevel.SLIGHTLY_DIFFICULT
                         )
                         .restStopPreference(
                                 RestStopPreference.REQUIRED
@@ -100,20 +104,34 @@ class AiRouteScoringRequestMapperTest {
         assertThat(request.getRequestId())
                 .isEqualTo("request-1");
 
-        assertThat(request.getUserContext()
-                .getWalkingDuration())
+        assertThat(
+                request.getUserContext()
+                        .getWalkingDuration()
+        )
                 .isEqualTo(
                         WalkingDuration.WITHIN_20_MINUTES
                 );
 
-        assertThat(request.getUserContext()
-                .getStairLevel())
+        assertThat(
+                request.getUserContext()
+                        .getStairLevel()
+        )
                 .isEqualTo(
                         StairLevel.SLIGHTLY_DIFFICULT
                 );
 
-        assertThat(request.getUserContext()
-                .getMobilityAid())
+        assertThat(
+                request.getUserContext()
+                        .getSlopeLevel()
+        )
+                .isEqualTo(
+                        SlopeLevel.SLIGHTLY_DIFFICULT
+                );
+
+        assertThat(
+                request.getUserContext()
+                        .getMobilityAid()
+        )
                 .isEqualTo(
                         MobilityAid.CANE_OR_WALKER
                 );
@@ -121,32 +139,42 @@ class AiRouteScoringRequestMapperTest {
         assertThat(request.getCandidates())
                 .hasSize(2);
 
-        assertThat(request.getCandidates()
-                .get(0)
-                .getRouteId())
+        assertThat(
+                request.getCandidates()
+                        .get(0)
+                        .getRouteId()
+        )
                 .isEqualTo("walking-1");
 
-        assertThat(request.getCandidates()
-                .get(0)
-                .getRouteOption())
+        assertThat(
+                request.getCandidates()
+                        .get(0)
+                        .getRouteOption()
+        )
                 .isEqualTo(
                         WalkingRouteOption.AVOID_STAIRS
                 );
 
-        assertThat(request.getCandidates()
-                .get(0)
-                .getMetrics()
-                .getTotalWalkDistanceM())
+        assertThat(
+                request.getCandidates()
+                        .get(0)
+                        .getMetrics()
+                        .getTotalWalkDistanceM()
+        )
                 .isEqualTo(1000);
 
-        assertThat(request.getCandidates()
-                .get(1)
-                .getRouteType())
+        assertThat(
+                request.getCandidates()
+                        .get(1)
+                        .getRouteType()
+        )
                 .isEqualTo(RouteType.TRANSIT);
 
-        assertThat(request.getCandidates()
-                .get(1)
-                .getRouteOption())
+        assertThat(
+                request.getCandidates()
+                        .get(1)
+                        .getRouteOption()
+        )
                 .isNull();
     }
 }

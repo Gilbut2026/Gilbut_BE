@@ -6,6 +6,7 @@ import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
+import com.gilbeot.gilbut.domain.user.type.SlopeLevel;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
@@ -28,6 +29,7 @@ public class AiRouteScoringRequest {
 
         private WalkingDuration walkingDuration;
         private StairLevel stairLevel;
+        private SlopeLevel slopeLevel;
         private RestStopPreference restStopPreference;
         private TransferLevel transferLevel;
         private MobilityAid mobilityAid;
