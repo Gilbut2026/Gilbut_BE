@@ -5,7 +5,6 @@ import com.gilbeot.gilbut.dto.route.RouteAccessibilitySignals;
 import org.springframework.stereotype.Component;
 
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 
 @Component
@@ -17,6 +16,8 @@ public class WalkingAccessibilitySignalExtractor {
 
     private static final int OVERPASS_TURN_TYPE = 125;
     private static final int UNDERPASS_TURN_TYPE = 126;
+    private static final int STAIR_TURN_TYPE = 127;
+    private static final int STAIR_RAMP_TURN_TYPE = 129;
 
     public RouteAccessibilitySignals extract(
             TmapWalkingRouteResponse response
@@ -147,6 +148,8 @@ public class WalkingAccessibilitySignalExtractor {
         }
 
         return switch (turnType) {
+            case STAIR_TURN_TYPE,
+                    STAIR_RAMP_TURN_TYPE -> ObstacleType.STAIR;
             case OVERPASS_TURN_TYPE -> ObstacleType.OVERPASS;
             case UNDERPASS_TURN_TYPE -> ObstacleType.UNDERPASS;
             default -> null;

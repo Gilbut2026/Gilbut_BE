@@ -75,6 +75,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getStair().getCount())
                 .isEqualTo(1);
 
@@ -82,6 +83,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getOverpass().getCount())
                 .isEqualTo(1);
 
@@ -89,6 +91,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getUnderpass().getCount())
                 .isEqualTo(1);
     }
@@ -137,6 +140,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getOverpass().getCount())
                 .isEqualTo(1);
     }
@@ -168,6 +172,24 @@ class WalkingAccessibilitySignalExtractorTest {
                               "properties": {
                                 "turnType": 126
                               }
+                            },
+                            {
+                              "geometry": {
+                                "type": "Point",
+                                "coordinates": [127.2, 37.2]
+                              },
+                              "properties": {
+                                "turnType": 127
+                              }
+                            },
+                            {
+                              "geometry": {
+                                "type": "Point",
+                                "coordinates": [127.3, 37.3]
+                              },
+                              "properties": {
+                                "turnType": 129
+                              }
                             }
                           ]
                         }
@@ -182,6 +204,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getOverpass().getCount())
                 .isEqualTo(1);
 
@@ -189,15 +212,17 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getUnderpass().getCount())
                 .isEqualTo(1);
 
         assertThat(result.getStair().getState())
                 .isEqualTo(
-                        RouteAccessibilitySignals.State.ABSENT
+                        RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getStair().getCount())
-                .isZero();
+                .isEqualTo(2);
     }
 
     @Test
@@ -271,6 +296,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.PRESENT
                 );
+
         assertThat(result.getStair().getCount())
                 .isEqualTo(2);
     }
@@ -310,6 +336,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.ABSENT
                 );
+
         assertThat(result.getStair().getCount())
                 .isZero();
 
@@ -317,6 +344,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.ABSENT
                 );
+
         assertThat(result.getUnderpass().getState())
                 .isEqualTo(
                         RouteAccessibilitySignals.State.ABSENT
@@ -334,6 +362,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.UNKNOWN
                 );
+
         assertThat(result.getStair().getCount())
                 .isNull();
 
@@ -341,6 +370,7 @@ class WalkingAccessibilitySignalExtractorTest {
                 .isEqualTo(
                         RouteAccessibilitySignals.State.UNKNOWN
                 );
+
         assertThat(result.getUnderpass().getState())
                 .isEqualTo(
                         RouteAccessibilitySignals.State.UNKNOWN
