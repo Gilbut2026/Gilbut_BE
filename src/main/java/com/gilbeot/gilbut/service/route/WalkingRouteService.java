@@ -30,12 +30,14 @@ public class WalkingRouteService {
 
     private static final String DEFAULT_ORIGIN_NAME = "출발지";
     private static final String DEFAULT_DESTINATION_NAME = "목적지";
+
     private static final WalkingRouteSearchOption DEFAULT_OPTION =
             new WalkingRouteSearchOption(
                     WalkingRouteOption.DEFAULT,
                     "walking-",
                     "0"
             );
+
     private static final WalkingRouteSearchOption AVOID_STAIRS_OPTION =
             new WalkingRouteSearchOption(
                     WalkingRouteOption.AVOID_STAIRS,
@@ -44,6 +46,7 @@ public class WalkingRouteService {
             );
 
     private final TmapWalkingRouteClient tmapWalkingRouteClient;
+    private final WalkingAccessibilitySignalExtractor walkingAccessibilitySignalExtractor;
 
     public WalkingRouteResponse search(
             WalkingRouteRequest request
@@ -63,7 +66,9 @@ public class WalkingRouteService {
                 );
 
         if (routes.isEmpty()) {
-            throw new CustomException(ErrorCode.ROUTE_SEARCH_FAILED);
+            throw new CustomException(
+                    ErrorCode.ROUTE_SEARCH_FAILED
+            );
         }
 
         return WalkingRouteResponse.builder()
@@ -85,7 +90,9 @@ public class WalkingRouteService {
         }
 
         if (routeOptions.isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_REQUEST);
+            throw new CustomException(
+                    ErrorCode.INVALID_REQUEST
+            );
         }
 
         Set<WalkingRouteOption> uniqueOptions =
@@ -93,7 +100,9 @@ public class WalkingRouteService {
 
         for (WalkingRouteOption routeOption : routeOptions) {
             if (routeOption == null) {
-                throw new CustomException(ErrorCode.INVALID_REQUEST);
+                throw new CustomException(
+                        ErrorCode.INVALID_REQUEST
+                );
             }
 
             uniqueOptions.add(routeOption);
@@ -148,6 +157,7 @@ public class WalkingRouteService {
     ) {
         WalkingRouteRequest.RoutePlaceRequest origin =
                 request.getOrigin();
+
         WalkingRouteRequest.RoutePlaceRequest destination =
                 request.getDestination();
 
@@ -178,32 +188,53 @@ public class WalkingRouteService {
             TmapWalkingRouteResponse response,
             WalkingRouteSearchOption option
     ) {
-        if (response == null || response.getFeatures() == null) {
-            throw new CustomException(ErrorCode.ROUTE_SEARCH_FAILED);
+        if (response == null
+                || response.getFeatures() == null) {
+            throw new CustomException(
+                    ErrorCode.ROUTE_SEARCH_FAILED
+            );
         }
 
         TmapWalkingRouteResponse.Properties summary =
                 extractSummary(response);
+
         RouteParseResult parseResult =
                 parseRoute(response.getFeatures());
 
         if (parseResult.routePoints().isEmpty()) {
-            throw new CustomException(ErrorCode.ROUTE_SEARCH_FAILED);
+            throw new CustomException(
+                    ErrorCode.ROUTE_SEARCH_FAILED
+            );
         }
 
         return WalkingRouteItemResponse.builder()
-                .routeId(generateRouteId(option.routeIdPrefix()))
+                .routeId(
+                        generateRouteId(
+                                option.routeIdPrefix()
+                        )
+                )
                 .routeOption(option.routeOption())
                 .summary(
                         WalkingRouteSummaryResponse.builder()
                                 .totalDistanceM(
                                         summary.getTotalDistance()
                                 )
-                                .totalTimeSec(summary.getTotalTime())
+                                .totalTimeSec(
+                                        summary.getTotalTime()
+                                )
                                 .build()
                 )
-                .routePoints(parseResult.routePoints())
-                .steps(parseResult.steps())
+                .routePoints(
+                        parseResult.routePoints()
+                )
+                .steps(
+                        parseResult.steps()
+                )
+                .accessibilitySignals(
+                        walkingAccessibilitySignalExtractor.extract(
+                                response
+                        )
+                )
                 .build();
     }
 
@@ -212,8 +243,12 @@ public class WalkingRouteService {
     ) {
         return response.getFeatures()
                 .stream()
-                .map(TmapWalkingRouteResponse.Feature::getProperties)
-                .filter(properties -> properties != null)
+                .map(
+                        TmapWalkingRouteResponse.Feature::getProperties
+                )
+                .filter(
+                        properties -> properties != null
+                )
                 .filter(properties ->
                         properties.getTotalDistance() != null
                                 && properties.getTotalTime() != null
@@ -231,34 +266,49 @@ public class WalkingRouteService {
     ) {
         List<RoutePointResponse> routePoints =
                 new ArrayList<>();
+
         List<WalkingStepResponse> steps =
                 new ArrayList<>();
+
         PendingInstruction pendingInstruction = null;
+
         int stepIndex = 1;
 
         for (TmapWalkingRouteResponse.Feature feature : features) {
-            if (feature == null || feature.getGeometry() == null) {
+            if (feature == null
+                    || feature.getGeometry() == null) {
                 continue;
             }
 
-            String geometryType = feature.getGeometry().getType();
+            String geometryType =
+                    feature.getGeometry().getType();
 
-            if ("Point".equalsIgnoreCase(geometryType)) {
+            if ("Point".equalsIgnoreCase(
+                    geometryType
+            )) {
                 pendingInstruction =
-                        toPendingInstruction(feature);
+                        toPendingInstruction(
+                                feature
+                        );
                 continue;
             }
 
-            if (!"LineString".equalsIgnoreCase(geometryType)) {
+            if (!"LineString".equalsIgnoreCase(
+                    geometryType
+            )) {
                 continue;
             }
 
             List<RoutePointResponse> linePoints =
                     extractLinePoints(
-                            feature.getGeometry().getCoordinates()
+                            feature.getGeometry()
+                                    .getCoordinates()
                     );
 
-            appendRoutePoints(routePoints, linePoints);
+            appendRoutePoints(
+                    routePoints,
+                    linePoints
+            );
 
             if (!linePoints.isEmpty()) {
                 steps.add(
@@ -272,7 +322,10 @@ public class WalkingRouteService {
             }
         }
 
-        return new RouteParseResult(routePoints, steps);
+        return new RouteParseResult(
+                routePoints,
+                steps
+        );
     }
 
     private PendingInstruction toPendingInstruction(
@@ -305,12 +358,17 @@ public class WalkingRouteService {
 
         if (!StringUtils.hasText(instruction)
                 && lineProperties != null) {
-            instruction = lineProperties.getDescription();
+            instruction =
+                    lineProperties.getDescription();
         }
 
         return WalkingStepResponse.builder()
                 .stepIndex(stepIndex)
-                .instruction(textOrNull(instruction))
+                .instruction(
+                        textOrNull(
+                                instruction
+                        )
+                )
                 .distanceM(
                         lineProperties == null
                                 ? null
@@ -338,14 +396,20 @@ public class WalkingRouteService {
     private List<RoutePointResponse> extractLinePoints(
             JsonNode coordinates
     ) {
-        if (coordinates == null || !coordinates.isArray()) {
+        if (coordinates == null
+                || !coordinates.isArray()) {
             return List.of();
         }
 
-        List<RoutePointResponse> points = new ArrayList<>();
+        List<RoutePointResponse> points =
+                new ArrayList<>();
 
         coordinates.forEach(coordinate ->
-                toPoint(coordinate).ifPresent(points::add)
+                toPoint(
+                        coordinate
+                ).ifPresent(
+                        points::add
+                )
         );
 
         return points;
@@ -359,7 +423,8 @@ public class WalkingRouteService {
         if (coordinate != null
                 && coordinate.isObject()
                 && coordinate.get("value") != null) {
-            pair = coordinate.get("value");
+            pair =
+                    coordinate.get("value");
         }
 
         if (pair == null
@@ -367,14 +432,19 @@ public class WalkingRouteService {
                 || pair.size() < 2
                 || !pair.get(0).isNumber()
                 || !pair.get(1).isNumber()) {
-
             return Optional.empty();
         }
 
-        double longitude = pair.get(0).asDouble();
-        double latitude = pair.get(1).asDouble();
+        double longitude =
+                pair.get(0).asDouble();
 
-        if (!isValidCoordinate(latitude, longitude)) {
+        double latitude =
+                pair.get(1).asDouble();
+
+        if (!isValidCoordinate(
+                latitude,
+                longitude
+        )) {
             return Optional.empty();
         }
 
@@ -391,7 +461,10 @@ public class WalkingRouteService {
             List<RoutePointResponse> linePoints
     ) {
         for (RoutePointResponse point : linePoints) {
-            if (!isSamePoint(lastPoint(routePoints), point)) {
+            if (!isSamePoint(
+                    lastPoint(routePoints),
+                    point
+            )) {
                 routePoints.add(point);
             }
         }
@@ -404,14 +477,17 @@ public class WalkingRouteService {
             return null;
         }
 
-        return points.get(points.size() - 1);
+        return points.get(
+                points.size() - 1
+        );
     }
 
     private boolean isSamePoint(
             RoutePointResponse first,
             RoutePointResponse second
     ) {
-        if (first == null || second == null) {
+        if (first == null
+                || second == null) {
             return false;
         }
 
@@ -435,14 +511,16 @@ public class WalkingRouteService {
                 || request.getOrigin().getLongitude() == null
                 || request.getDestination().getLatitude() == null
                 || request.getDestination().getLongitude() == null) {
-
-            throw new CustomException(ErrorCode.INVALID_REQUEST);
+            throw new CustomException(
+                    ErrorCode.INVALID_REQUEST
+            );
         }
 
         validateCoordinate(
                 request.getOrigin().getLatitude(),
                 request.getOrigin().getLongitude()
         );
+
         validateCoordinate(
                 request.getDestination().getLatitude(),
                 request.getDestination().getLongitude()
@@ -453,8 +531,13 @@ public class WalkingRouteService {
             double latitude,
             double longitude
     ) {
-        if (!isValidCoordinate(latitude, longitude)) {
-            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        if (!isValidCoordinate(
+                latitude,
+                longitude
+        )) {
+            throw new CustomException(
+                    ErrorCode.INVALID_REQUEST
+            );
         }
     }
 
@@ -466,7 +549,8 @@ public class WalkingRouteService {
                 && latitude <= 90
                 && longitude >= -180
                 && longitude <= 180
-                && !(latitude == 0 && longitude == 0);
+                && !(latitude == 0
+                && longitude == 0);
     }
 
     private String textOrDefault(
@@ -489,7 +573,8 @@ public class WalkingRouteService {
     private String generateRouteId(
             String prefix
     ) {
-        return prefix + UUID.randomUUID();
+        return prefix
+                + UUID.randomUUID();
     }
 
     private record WalkingRouteSearchOption(

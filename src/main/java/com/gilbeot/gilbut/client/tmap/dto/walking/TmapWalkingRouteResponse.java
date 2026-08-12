@@ -49,6 +49,7 @@ public class TmapWalkingRouteResponse {
         private Integer time;
         private String description;
         private Integer turnType;
+        private Integer facilityType;
         private String pointType;
     }
 }

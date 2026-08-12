@@ -1,6 +1,8 @@
 package com.gilbeot.gilbut.client.ai.mapper;
 
 import com.gilbeot.gilbut.client.ai.dto.scoring.AiRouteScoringRequest;
+import com.gilbeot.gilbut.client.ai.dto.scoring.type.AccessibilitySignalState;
+import com.gilbeot.gilbut.client.ai.dto.scoring.type.SegmentScope;
 import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.domain.user.type.MobilityAid;
@@ -9,9 +11,11 @@ import com.gilbeot.gilbut.domain.user.type.SlopeLevel;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
+import com.gilbeot.gilbut.dto.route.RouteAccessibilitySignals;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteMetrics;
+import com.gilbeot.gilbut.dto.route.RouteWalkSegment;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +30,7 @@ class AiRouteScoringRequestMapperTest {
             new AiRouteScoringRequestMapper();
 
     @Test
-    @DisplayName("사용자 이동 특성과 경로 후보를 AI 스코어링 요청으로 변환한다")
+    @DisplayName("사용자 이동 특성과 접근성 정보를 포함한 경로 후보를 AI 스코어링 요청으로 변환한다")
     void toRequest() {
 
         MobilityProfileResponse profile =
@@ -66,6 +70,30 @@ class AiRouteScoringRequestMapperTest {
                                         .totalWalkDistanceM(1000)
                                         .transferCount(0)
                                         .build()
+                        )
+                        .walkSegments(
+                                List.of(
+                                        RouteWalkSegment.builder()
+                                                .walkSegmentId(
+                                                        "walking-1:walk:0"
+                                                )
+                                                .role(
+                                                        RouteWalkSegment.Role.WALKING_ROUTE
+                                                )
+                                                .segmentScope(
+                                                        SegmentScope.EXTERNAL_WALK
+                                                )
+                                                .distanceM(1000)
+                                                .durationSec(900)
+                                                .accessibilitySignals(
+                                                        RouteAccessibilitySignals.known(
+                                                                1,
+                                                                0,
+                                                                1
+                                                        )
+                                                )
+                                                .build()
+                                )
                         )
                         .build();
 
@@ -107,74 +135,152 @@ class AiRouteScoringRequestMapperTest {
         assertThat(
                 request.getUserContext()
                         .getWalkingDuration()
-        )
-                .isEqualTo(
-                        WalkingDuration.WITHIN_20_MINUTES
-                );
+        ).isEqualTo(
+                WalkingDuration.WITHIN_20_MINUTES
+        );
 
         assertThat(
                 request.getUserContext()
                         .getStairLevel()
-        )
-                .isEqualTo(
-                        StairLevel.SLIGHTLY_DIFFICULT
-                );
+        ).isEqualTo(
+                StairLevel.SLIGHTLY_DIFFICULT
+        );
 
         assertThat(
                 request.getUserContext()
                         .getSlopeLevel()
-        )
-                .isEqualTo(
-                        SlopeLevel.SLIGHTLY_DIFFICULT
-                );
+        ).isEqualTo(
+                SlopeLevel.SLIGHTLY_DIFFICULT
+        );
+
+        assertThat(
+                request.getUserContext()
+                        .getRestStopPreference()
+        ).isEqualTo(
+                RestStopPreference.REQUIRED
+        );
+
+        assertThat(
+                request.getUserContext()
+                        .getTransferLevel()
+        ).isEqualTo(
+                TransferLevel.FEWER_PREFERRED
+        );
 
         assertThat(
                 request.getUserContext()
                         .getMobilityAid()
-        )
-                .isEqualTo(
-                        MobilityAid.CANE_OR_WALKER
-                );
+        ).isEqualTo(
+                MobilityAid.CANE_OR_WALKER
+        );
 
         assertThat(request.getCandidates())
                 .hasSize(2);
 
-        assertThat(
+        AiRouteScoringRequest.Candidate walkingRequestCandidate =
                 request.getCandidates()
-                        .get(0)
-                        .getRouteId()
-        )
-                .isEqualTo("walking-1");
+                        .get(0);
 
         assertThat(
-                request.getCandidates()
-                        .get(0)
-                        .getRouteOption()
-        )
-                .isEqualTo(
-                        WalkingRouteOption.AVOID_STAIRS
-                );
+                walkingRequestCandidate.getRouteId()
+        ).isEqualTo("walking-1");
 
         assertThat(
-                request.getCandidates()
-                        .get(0)
-                        .getMetrics()
+                walkingRequestCandidate.getRouteOption()
+        ).isEqualTo(
+                WalkingRouteOption.AVOID_STAIRS
+        );
+
+        assertThat(
+                walkingRequestCandidate.getMetrics()
                         .getTotalWalkDistanceM()
-        )
-                .isEqualTo(1000);
+        ).isEqualTo(1000);
 
         assertThat(
-                request.getCandidates()
-                        .get(1)
-                        .getRouteType()
-        )
-                .isEqualTo(RouteType.TRANSIT);
+                walkingRequestCandidate.getWalkSegments()
+        ).hasSize(1);
+
+        AiRouteScoringRequest.WalkSegment walkSegment =
+                walkingRequestCandidate
+                        .getWalkSegments()
+                        .get(0);
 
         assertThat(
+                walkSegment.getWalkSegmentId()
+        ).isEqualTo("walking-1:walk:0");
+
+        assertThat(
+                walkSegment.getRole()
+        ).isEqualTo("WALKING_ROUTE");
+
+        assertThat(
+                walkSegment.getSegmentScope()
+        ).isEqualTo(
+                SegmentScope.EXTERNAL_WALK
+        );
+
+        assertThat(
+                walkSegment.getAccessibilitySignals()
+        ).isNotNull();
+
+        assertThat(
+                walkSegment.getAccessibilitySignals()
+                        .getStair()
+                        .getState()
+        ).isEqualTo(
+                AccessibilitySignalState.PRESENT
+        );
+
+        assertThat(
+                walkSegment.getAccessibilitySignals()
+                        .getStair()
+                        .getCount()
+        ).isEqualTo(1);
+
+        assertThat(
+                walkSegment.getAccessibilitySignals()
+                        .getOverpass()
+                        .getState()
+        ).isEqualTo(
+                AccessibilitySignalState.ABSENT
+        );
+
+        assertThat(
+                walkSegment.getAccessibilitySignals()
+                        .getOverpass()
+                        .getCount()
+        ).isZero();
+
+        assertThat(
+                walkSegment.getAccessibilitySignals()
+                        .getUnderpass()
+                        .getState()
+        ).isEqualTo(
+                AccessibilitySignalState.PRESENT
+        );
+
+        assertThat(
+                walkSegment.getAccessibilitySignals()
+                        .getUnderpass()
+                        .getCount()
+        ).isEqualTo(1);
+
+        AiRouteScoringRequest.Candidate transitRequestCandidate =
                 request.getCandidates()
-                        .get(1)
-                        .getRouteOption()
-        )
-                .isNull();
+                        .get(1);
+
+        assertThat(
+                transitRequestCandidate.getRouteType()
+        ).isEqualTo(
+                RouteType.TRANSIT
+        );
+
+        assertThat(
+                transitRequestCandidate.getRouteOption()
+        ).isNull();
+
+        assertThat(
+                transitRequestCandidate.getWalkSegments()
+        ).isEmpty();
     }
 }

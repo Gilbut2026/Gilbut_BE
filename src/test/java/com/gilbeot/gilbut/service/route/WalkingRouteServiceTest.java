@@ -5,6 +5,7 @@ import com.gilbeot.gilbut.client.tmap.TmapWalkingRouteClient;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteRequest;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteResponse;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
+import com.gilbeot.gilbut.dto.route.RouteAccessibilitySignals;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
@@ -42,7 +43,8 @@ class WalkingRouteServiceTest {
     void setUp() {
         walkingRouteService =
                 new WalkingRouteService(
-                        tmapWalkingRouteClient
+                        tmapWalkingRouteClient,
+                        new WalkingAccessibilitySignalExtractor()
                 );
     }
 
@@ -122,6 +124,36 @@ class WalkingRouteServiceTest {
                         .get(1)
                         .getTurnType()
         ).isEqualTo(13);
+
+        assertThat(
+                defaultRoute.getAccessibilitySignals()
+                        .getStair()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.PRESENT
+        );
+
+        assertThat(
+                defaultRoute.getAccessibilitySignals()
+                        .getStair()
+                        .getCount()
+        ).isEqualTo(1);
+
+        assertThat(
+                defaultRoute.getAccessibilitySignals()
+                        .getOverpass()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.ABSENT
+        );
+
+        assertThat(
+                defaultRoute.getAccessibilitySignals()
+                        .getUnderpass()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.ABSENT
+        );
 
         assertThat(avoidStairsRoute.getRouteId())
                 .startsWith("walking-avoid-stairs-");
@@ -389,6 +421,22 @@ class WalkingRouteServiceTest {
 
     private TmapWalkingRouteResponse tmapResponse()
             throws Exception {
+
+        TmapWalkingRouteResponse.Feature stairFeature =
+                lineFeature(
+                        35,
+                        40,
+                        """
+                                [
+                                  [126.999958, 37.265714],
+                                  [126.999785, 37.266003]
+                                ]
+                                """
+                );
+
+        stairFeature.getProperties()
+                .setFacilityType(17);
+
         TmapWalkingRouteResponse response =
                 new TmapWalkingRouteResponse();
 
@@ -401,16 +449,7 @@ class WalkingRouteServiceTest {
                                 200,
                                 "SP"
                         ),
-                        lineFeature(
-                                35,
-                                40,
-                                """
-                                        [
-                                          [126.999958, 37.265714],
-                                          [126.999785, 37.266003]
-                                        ]
-                                        """
-                        ),
+                        stairFeature,
                         pointFeature(
                                 null,
                                 null,
