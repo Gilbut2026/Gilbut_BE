@@ -6,6 +6,7 @@ import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.List;
 
 @Slf4j
@@ -23,10 +25,28 @@ public class TmapWalkingRouteClient {
     private static final String TMAP_WALKING_ROUTE_URL =
             "https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1&format=json";
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${tmap.app-key}")
     private String tmapAppKey;
+
+    public TmapWalkingRouteClient(
+            RestTemplateBuilder restTemplateBuilder,
+            @Value("${tmap.walking.connect-timeout-ms:1000}")
+            long connectTimeoutMs,
+            @Value("${tmap.walking.read-timeout-ms:2000}")
+            long readTimeoutMs
+    ) {
+        this.restTemplate =
+                restTemplateBuilder
+                        .setConnectTimeout(
+                                Duration.ofMillis(connectTimeoutMs)
+                        )
+                        .setReadTimeout(
+                                Duration.ofMillis(readTimeoutMs)
+                        )
+                        .build();
+    }
 
     public TmapWalkingRouteResponse search(
             TmapWalkingRouteRequest request
@@ -69,9 +89,17 @@ public class TmapWalkingRouteClient {
             TmapWalkingRouteRequest request
     ) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("appKey", tmapAppKey);
+
+        headers.setAccept(
+                List.of(MediaType.APPLICATION_JSON)
+        );
+        headers.setContentType(
+                MediaType.APPLICATION_JSON
+        );
+        headers.set(
+                "appKey",
+                tmapAppKey
+        );
 
         return new HttpEntity<>(
                 request,
