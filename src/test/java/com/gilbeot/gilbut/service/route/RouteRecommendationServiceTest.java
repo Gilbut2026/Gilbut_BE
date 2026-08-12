@@ -7,6 +7,9 @@ import com.gilbeot.gilbut.client.ai.dto.scoring.type.ScoringResultStatus;
 import com.gilbeot.gilbut.client.ai.mapper.AiRouteScoringRequestMapper;
 import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
+import com.gilbeot.gilbut.dto.drt.DrtAvailability;
+import com.gilbeot.gilbut.dto.drt.DrtGuideResponse;
+import com.gilbeot.gilbut.dto.drt.DrtServiceArea;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
@@ -14,6 +17,7 @@ import com.gilbeot.gilbut.dto.route.RouteMetrics;
 import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +30,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +51,9 @@ class RouteRecommendationServiceTest {
     @Mock
     private AiRouteScoringClient aiRouteScoringClient;
 
+    @Mock
+    private DrtGuideService drtGuideService;
+
     private RouteRecommendationService routeRecommendationService;
 
     @BeforeEach
@@ -56,14 +64,14 @@ class RouteRecommendationServiceTest {
                         routeAccessibilityEnrichmentService,
                         userMobilityProfileService,
                         aiRouteScoringRequestMapper,
-                        aiRouteScoringClient
+                        aiRouteScoringClient,
+                        drtGuideService
                 );
     }
 
     @Test
-    @DisplayName("AI 스코어링 결과를 순위대로 경로 후보와 매칭한다")
+    @DisplayName("AI 스코어링 결과와 똑버스 안내를 경로 추천 결과로 반환한다")
     void recommend() {
-
         Long userId = 1L;
 
         RouteCandidateRequest request =
@@ -121,6 +129,15 @@ class RouteRecommendationServiceTest {
                         .filterCodes(List.of())
                         .build();
 
+        AiRouteScoringResponse.DrtDecision drtDecision =
+                AiRouteScoringResponse.DrtDecision.builder()
+                        .show(true)
+                        .priority(true)
+                        .taxiGuide(false)
+                        .reasonCodes(List.of())
+                        .basedOnRouteId("walking-1")
+                        .build();
+
         AiRouteScoringResponse scoringResponse =
                 AiRouteScoringResponse.builder()
                         .requestId("request-1")
@@ -129,6 +146,25 @@ class RouteRecommendationServiceTest {
                         )
                         .results(
                                 List.of(scoringResult)
+                        )
+                        .drtDecision(drtDecision)
+                        .build();
+
+        DrtGuideResponse drtGuide =
+                DrtGuideResponse.builder()
+                        .show(true)
+                        .serviceName("수원 똑버스")
+                        .serviceArea(
+                                DrtServiceArea.GWANGGYO
+                        )
+                        .serviceAreaName("광교1·2동")
+                        .availability(
+                                DrtAvailability.CHECK_REQUIRED
+                        )
+                        .message(
+                                "이 지역은 똑버스 운행 지역이에요. "
+                                        + "실제 호출 가능한 정류장과 배차 여부는 "
+                                        + "똑타 앱에서 확인해 주세요."
                         )
                         .build();
 
@@ -159,6 +195,13 @@ class RouteRecommendationServiceTest {
                         scoringRequest
                 )
         ).thenReturn(scoringResponse);
+
+        when(
+                drtGuideService.createGuide(
+                        request,
+                        drtDecision
+                )
+        ).thenReturn(drtGuide);
 
         RouteRecommendationResult result =
                 routeRecommendationService.recommend(
@@ -195,12 +238,38 @@ class RouteRecommendationServiceTest {
                         .get(0)
                         .getCandidate()
         ).isSameAs(candidate);
+
+        assertThat(result.getDrtDecision())
+                .isSameAs(drtDecision);
+
+        assertThat(result.getDrtGuide())
+                .isSameAs(drtGuide);
+
+        assertThat(
+                result.getDrtGuide()
+                        .getServiceArea()
+        ).isEqualTo(
+                DrtServiceArea.GWANGGYO
+        );
+
+        assertThat(
+                result.getDrtGuide()
+                        .getAvailability()
+        ).isEqualTo(
+                DrtAvailability.CHECK_REQUIRED
+        );
+
+        verify(
+                drtGuideService
+        ).createGuide(
+                request,
+                drtDecision
+        );
     }
 
     @Test
     @DisplayName("AI 응답 requestId가 다르면 예외가 발생한다")
     void rejectsDifferentRequestId() {
-
         Long userId = 1L;
 
         RouteCandidateRequest request =

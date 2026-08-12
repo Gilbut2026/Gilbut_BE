@@ -5,6 +5,7 @@ import com.gilbeot.gilbut.client.ai.dto.scoring.AiRouteScoringRequest;
 import com.gilbeot.gilbut.client.ai.dto.scoring.AiRouteScoringResponse;
 import com.gilbeot.gilbut.client.ai.dto.scoring.type.ScoringResultStatus;
 import com.gilbeot.gilbut.client.ai.mapper.AiRouteScoringRequestMapper;
+import com.gilbeot.gilbut.dto.drt.DrtGuideResponse;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
@@ -13,6 +14,7 @@ import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class RouteRecommendationService {
     private final UserMobilityProfileService userMobilityProfileService;
     private final AiRouteScoringRequestMapper aiRouteScoringRequestMapper;
     private final AiRouteScoringClient aiRouteScoringClient;
+    private final DrtGuideService drtGuideService;
 
     public RouteRecommendationResult recommend(
             Long userId,
@@ -68,9 +71,16 @@ public class RouteRecommendationService {
                 scoringResponse
         );
 
+        DrtGuideResponse drtGuide =
+                drtGuideService.createGuide(
+                        request,
+                        scoringResponse.getDrtDecision()
+                );
+
         return buildResult(
                 candidateResult,
-                scoringResponse
+                scoringResponse,
+                drtGuide
         );
     }
 
@@ -103,7 +113,11 @@ public class RouteRecommendationService {
                 candidateResult.getCandidates()
                         .stream()
                         .map(RouteCandidate::getRouteId)
-                        .collect(HashSet::new, Set::add, Set::addAll);
+                        .collect(
+                                HashSet::new,
+                                Set::add,
+                                Set::addAll
+                        );
 
         Set<String> responseRouteIds =
                 new HashSet<>();
@@ -158,7 +172,8 @@ public class RouteRecommendationService {
 
     private RouteRecommendationResult buildResult(
             RouteCandidateResult candidateResult,
-            AiRouteScoringResponse scoringResponse
+            AiRouteScoringResponse scoringResponse,
+            DrtGuideResponse drtGuide
     ) {
         Map<String, RouteCandidate> candidateMap =
                 new HashMap<>();
@@ -234,6 +249,9 @@ public class RouteRecommendationService {
                 )
                 .drtDecision(
                         scoringResponse.getDrtDecision()
+                )
+                .drtGuide(
+                        drtGuide
                 )
                 .walkingRoute(
                         candidateResult.getWalkingRoute()
