@@ -1,9 +1,13 @@
 package com.gilbeot.gilbut.controller;
 
+import com.gilbeot.gilbut.dto.route.walking.request.NavigationRerouteRequest;
+import com.gilbeot.gilbut.dto.route.walking.request.RestStopRerouteRequest;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
+import com.gilbeot.gilbut.dto.route.walking.response.RestStopRerouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.global.common.api.ApiResponse;
 import com.gilbeot.gilbut.global.common.code.SuccessCode;
+import com.gilbeot.gilbut.service.route.WalkingRerouteService;
 import com.gilbeot.gilbut.service.route.WalkingRouteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class RouteController {
 
     private final WalkingRouteService walkingRouteService;
+    private final WalkingRerouteService walkingRerouteService;
 
     @PostMapping("/walking")
     public ResponseEntity<ApiResponse<WalkingRouteResponse>>
@@ -27,6 +32,36 @@ public class RouteController {
     ) {
         WalkingRouteResponse response =
                 walkingRouteService.search(request);
+
+        return ApiResponse.success(
+                SuccessCode._OK,
+                response
+        );
+    }
+
+    @PostMapping("/walking/reroute")
+    public ResponseEntity<ApiResponse<WalkingRouteResponse>>
+    rerouteWalkingRoute(
+            @Valid @RequestBody NavigationRerouteRequest request
+    ) {
+        WalkingRouteResponse response =
+                walkingRerouteService.reroute(request);
+
+        return ApiResponse.success(
+                SuccessCode._OK,
+                response
+        );
+    }
+
+    @PostMapping("/walking/rest-stop-reroute")
+    public ResponseEntity<ApiResponse<RestStopRerouteResponse>>
+    rerouteWalkingRouteViaRestStop(
+            @Valid @RequestBody RestStopRerouteRequest request
+    ) {
+        RestStopRerouteResponse response =
+                walkingRerouteService.rerouteViaRestStop(
+                        request
+                );
 
         return ApiResponse.success(
                 SuccessCode._OK,
