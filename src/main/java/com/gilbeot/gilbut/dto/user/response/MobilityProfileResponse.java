@@ -3,6 +3,7 @@ package com.gilbeot.gilbut.dto.user.response;
 import com.gilbeot.gilbut.domain.user.UserMobilityProfile;
 import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
+import com.gilbeot.gilbut.domain.user.type.SlopeLevel;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
@@ -18,6 +19,8 @@ public class MobilityProfileResponse {
     private WalkingDuration walkingDuration;
 
     private StairLevel stairLevel;
+
+    private SlopeLevel slopeLevel;
 
     private RestStopPreference restStopPreference;
 
@@ -35,6 +38,9 @@ public class MobilityProfileResponse {
                 )
                 .stairLevel(
                         profile.getStairLevel()
+                )
+                .slopeLevel(
+                        profile.getSlopeLevel()
                 )
                 .restStopPreference(
                         profile.getRestStopPreference()
