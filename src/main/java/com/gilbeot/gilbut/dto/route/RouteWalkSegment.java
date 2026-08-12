@@ -16,6 +16,7 @@ public class RouteWalkSegment {
     private Integer distanceM;
     private Integer durationSec;
     private Geometry geometry;
+    private RouteAccessibilitySignals accessibilitySignals;
 
     public enum Role {
         WALKING_ROUTE,

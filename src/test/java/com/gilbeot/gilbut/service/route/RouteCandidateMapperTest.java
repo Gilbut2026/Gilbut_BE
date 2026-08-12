@@ -2,6 +2,7 @@ package com.gilbeot.gilbut.service.route;
 
 import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
+import com.gilbeot.gilbut.dto.route.RouteAccessibilitySignals;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
@@ -22,8 +23,8 @@ class RouteCandidateMapperTest {
             new RouteCandidateMapper();
 
     @Test
-    @DisplayName("보행 경로의 routeOption을 경로 후보에 유지한다")
-    void keepsWalkingRouteOption() {
+    @DisplayName("보행 경로의 routeOption과 접근성 신호를 경로 후보에 유지한다")
+    void keepsWalkingRouteOptionAndAccessibilitySignals() {
 
         WalkingRouteResponse response =
                 WalkingRouteResponse.builder()
@@ -50,6 +51,50 @@ class RouteCandidateMapperTest {
                         WalkingRouteOption.DEFAULT,
                         WalkingRouteOption.AVOID_STAIRS
                 );
+
+        RouteCandidate defaultCandidate =
+                candidates.get(0);
+
+        assertThat(defaultCandidate.getWalkSegments())
+                .hasSize(1);
+
+        assertThat(
+                defaultCandidate.getWalkSegments()
+                        .get(0)
+                        .getAccessibilitySignals()
+                        .getStair()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.PRESENT
+        );
+
+        assertThat(
+                defaultCandidate.getWalkSegments()
+                        .get(0)
+                        .getAccessibilitySignals()
+                        .getStair()
+                        .getCount()
+        ).isEqualTo(1);
+
+        assertThat(
+                defaultCandidate.getWalkSegments()
+                        .get(0)
+                        .getAccessibilitySignals()
+                        .getOverpass()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.ABSENT
+        );
+
+        assertThat(
+                defaultCandidate.getWalkSegments()
+                        .get(0)
+                        .getAccessibilitySignals()
+                        .getUnderpass()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.ABSENT
+        );
     }
 
     @Test
@@ -106,6 +151,13 @@ class RouteCandidateMapperTest {
                 )
                 .routePoints(List.of())
                 .steps(List.of())
+                .accessibilitySignals(
+                        RouteAccessibilitySignals.known(
+                                1,
+                                0,
+                                0
+                        )
+                )
                 .build();
     }
 }

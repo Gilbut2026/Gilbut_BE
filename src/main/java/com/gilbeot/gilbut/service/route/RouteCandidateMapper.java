@@ -118,6 +118,9 @@ public class RouteCandidateMapper {
                                         .geometry(
                                                 walkingGeometry(route)
                                         )
+                                        .accessibilitySignals(
+                                                route.getAccessibilitySignals()
+                                        )
                                         .build()
                         )
                 )
