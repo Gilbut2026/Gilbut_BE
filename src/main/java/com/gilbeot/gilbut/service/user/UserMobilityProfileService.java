@@ -4,6 +4,7 @@ import com.gilbeot.gilbut.domain.user.User;
 import com.gilbeot.gilbut.domain.user.UserMobilityProfile;
 import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.domain.user.type.RestStopPreference;
+import com.gilbeot.gilbut.domain.user.type.SlopeLevel;
 import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.domain.user.type.TransferLevel;
 import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
@@ -48,6 +49,7 @@ public class UserMobilityProfileService {
                 userId,
                 request.getWalkingDuration(),
                 request.getStairLevel(),
+                request.getSlopeLevel(),
                 request.getRestStopPreference(),
                 request.getTransferLevel(),
                 request.getMobilityAid()
@@ -59,6 +61,7 @@ public class UserMobilityProfileService {
             Long userId,
             WalkingDuration walkingDuration,
             StairLevel stairLevel,
+            SlopeLevel slopeLevel,
             RestStopPreference restStopPreference,
             TransferLevel transferLevel,
             MobilityAid mobilityAid
@@ -78,6 +81,7 @@ public class UserMobilityProfileService {
                                 user,
                                 walkingDuration,
                                 stairLevel,
+                                slopeLevel,
                                 restStopPreference,
                                 transferLevel,
                                 mobilityAid
@@ -87,6 +91,7 @@ public class UserMobilityProfileService {
         profile.update(
                 walkingDuration,
                 stairLevel,
+                slopeLevel,
                 restStopPreference,
                 transferLevel,
                 mobilityAid
@@ -102,6 +107,7 @@ public class UserMobilityProfileService {
             User user,
             WalkingDuration walkingDuration,
             StairLevel stairLevel,
+            SlopeLevel slopeLevel,
             RestStopPreference restStopPreference,
             TransferLevel transferLevel,
             MobilityAid mobilityAid
@@ -110,6 +116,7 @@ public class UserMobilityProfileService {
                 .user(user)
                 .walkingDuration(walkingDuration)
                 .stairLevel(stairLevel)
+                .slopeLevel(slopeLevel)
                 .restStopPreference(restStopPreference)
                 .transferLevel(transferLevel)
                 .mobilityAid(mobilityAid)
