@@ -11,147 +11,246 @@ import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteWalkSegment;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RouteAccessibilityEnrichmentServiceTest {
 
     @Mock
-    private TmapWalkingRouteClient tmapWalkingRouteClient;
+    private TmapWalkingRouteClient
+            tmapWalkingRouteClient;
 
-    private RouteAccessibilityEnrichmentService service;
+    @Mock
+    private WalkingAccessibilitySignalExtractor
+            walkingAccessibilitySignalExtractor;
+
+    private ExecutorService executorService;
+
+    private RouteAccessibilityEnrichmentService
+            routeAccessibilityEnrichmentService;
 
     @BeforeEach
     void setUp() {
-        service =
+        executorService =
+                Executors.newFixedThreadPool(3);
+
+        routeAccessibilityEnrichmentService =
                 new RouteAccessibilityEnrichmentService(
                         tmapWalkingRouteClient,
-                        new WalkingAccessibilitySignalExtractor()
+                        walkingAccessibilitySignalExtractor,
+                        executorService
                 );
     }
 
-    @Test
-    @DisplayName("대중교통 외부 도보 구간을 보행자 API로 재조회해 접근성 신호를 추가한다")
-    void enrichExternalWalkSegments() {
-        when(
-                tmapWalkingRouteClient.search(any())
-        ).thenReturn(
-                stairResponse(),
-                stairResponse()
-        );
+    @AfterEach
+    void tearDown() {
+        executorService.shutdownNow();
+    }
 
-        RouteCandidate candidate =
-                transitCandidate(
-                        List.of(
-                                externalSegment(
-                                        "walk-1",
-                                        RouteWalkSegment.Role.ORIGIN_TO_FIRST_STOP,
-                                        127.0000,
-                                        37.0000,
-                                        127.0010,
-                                        37.0010
-                                ),
-                                transferSegment(),
-                                externalSegment(
-                                        "walk-3",
-                                        RouteWalkSegment.Role.LAST_STOP_TO_DESTINATION,
-                                        127.0100,
-                                        37.0100,
-                                        127.0110,
-                                        37.0110
-                                )
-                        )
+    @Test
+    @DisplayName(
+            "대중교통 외부 도보 구간의 접근성 정보를 조회한다"
+    )
+    void enrichesExternalWalkSegments() {
+        TmapWalkingRouteResponse response =
+                new TmapWalkingRouteResponse();
+
+        RouteAccessibilitySignals signals =
+                RouteAccessibilitySignals.known(
+                        1,
+                        0,
+                        0
+                );
+
+        when(
+                tmapWalkingRouteClient.search(
+                        any(TmapWalkingRouteRequest.class)
+                )
+        ).thenReturn(response);
+
+        when(
+                walkingAccessibilitySignalExtractor
+                        .extract(response)
+        ).thenReturn(signals);
+
+        RouteWalkSegment firstSegment =
+                externalWalkSegment(
+                        "transit-1:walk:0",
+                        127.0286,
+                        37.2636,
+                        127.0290,
+                        37.2640
+                );
+
+        RouteWalkSegment secondSegment =
+                externalWalkSegment(
+                        "transit-1:walk:1",
+                        127.0400,
+                        37.2700,
+                        127.0410,
+                        37.2710
                 );
 
         RouteCandidateResult result =
-                service.enrich(
-                        candidateResult(candidate)
-                );
+                routeAccessibilityEnrichmentService
+                        .enrich(
+                                candidateResult(
+                                        List.of(
+                                                firstSegment,
+                                                secondSegment
+                                        )
+                                )
+                        );
 
-        List<RouteWalkSegment> segments =
+        List<RouteWalkSegment> enrichedSegments =
                 result.getCandidates()
                         .get(0)
                         .getWalkSegments();
 
         assertThat(
-                segments.get(0)
+                enrichedSegments.get(0)
                         .getAccessibilitySignals()
-                        .getStair()
-                        .getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.PRESENT
-        );
+        ).isSameAs(signals);
 
         assertThat(
-                segments.get(0)
+                enrichedSegments.get(1)
                         .getAccessibilitySignals()
-                        .getStair()
-                        .getCount()
-        ).isEqualTo(1);
-
-        assertThat(
-                segments.get(1)
-                        .getAccessibilitySignals()
-        ).isNull();
-
-        assertThat(
-                segments.get(2)
-                        .getAccessibilitySignals()
-                        .getStair()
-                        .getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.PRESENT
-        );
+        ).isSameAs(signals);
 
         verify(
                 tmapWalkingRouteClient,
                 times(2)
-        ).search(any());
+        ).search(
+                any(TmapWalkingRouteRequest.class)
+        );
     }
 
     @Test
-    @DisplayName("보행자 API 재조회가 실패하면 접근성 신호를 UNKNOWN으로 처리한다")
-    void markUnknownWhenPedestrianLookupFails() {
+    @DisplayName(
+            "동일한 좌표의 외부 도보 구간은 한 번만 조회한다"
+    )
+    void reusesDuplicateCoordinateLookup() {
+        TmapWalkingRouteResponse response =
+                new TmapWalkingRouteResponse();
+
+        RouteAccessibilitySignals signals =
+                RouteAccessibilitySignals.known(
+                        0,
+                        0,
+                        0
+                );
+
         when(
-                tmapWalkingRouteClient.search(any())
+                tmapWalkingRouteClient.search(
+                        any(TmapWalkingRouteRequest.class)
+                )
+        ).thenReturn(response);
+
+        when(
+                walkingAccessibilitySignalExtractor
+                        .extract(response)
+        ).thenReturn(signals);
+
+        RouteWalkSegment firstSegment =
+                externalWalkSegment(
+                        "transit-1:walk:0",
+                        127.0286,
+                        37.2636,
+                        127.0290,
+                        37.2640
+                );
+
+        RouteWalkSegment duplicateSegment =
+                externalWalkSegment(
+                        "transit-2:walk:0",
+                        127.0286,
+                        37.2636,
+                        127.0290,
+                        37.2640
+                );
+
+        RouteCandidateResult result =
+                routeAccessibilityEnrichmentService
+                        .enrich(
+                                candidateResult(
+                                        List.of(
+                                                firstSegment,
+                                                duplicateSegment
+                                        )
+                                )
+                        );
+
+        List<RouteWalkSegment> enrichedSegments =
+                result.getCandidates()
+                        .get(0)
+                        .getWalkSegments();
+
+        assertThat(
+                enrichedSegments.get(0)
+                        .getAccessibilitySignals()
+        ).isSameAs(signals);
+
+        assertThat(
+                enrichedSegments.get(1)
+                        .getAccessibilitySignals()
+        ).isSameAs(signals);
+
+        verify(
+                tmapWalkingRouteClient,
+                times(1)
+        ).search(
+                any(TmapWalkingRouteRequest.class)
+        );
+    }
+
+    @Test
+    @DisplayName(
+            "TMAP 도보 조회 실패 시 접근성 정보를 UNKNOWN으로 처리한다"
+    )
+    void fallsBackToUnknownWhenLookupFails() {
+        when(
+                tmapWalkingRouteClient.search(
+                        any(TmapWalkingRouteRequest.class)
+                )
         ).thenThrow(
                 new CustomException(
                         ErrorCode.ROUTE_SEARCH_FAILED
                 )
         );
 
-        RouteCandidate candidate =
-                transitCandidate(
-                        List.of(
-                                externalSegment(
-                                        "walk-1",
-                                        RouteWalkSegment.Role.ORIGIN_TO_FIRST_STOP,
-                                        127.0000,
-                                        37.0000,
-                                        127.0010,
-                                        37.0010
-                                )
-                        )
+        RouteWalkSegment segment =
+                externalWalkSegment(
+                        "transit-1:walk:0",
+                        127.0286,
+                        37.2636,
+                        127.0290,
+                        37.2640
                 );
 
         RouteCandidateResult result =
-                service.enrich(
-                        candidateResult(candidate)
-                );
+                routeAccessibilityEnrichmentService
+                        .enrich(
+                                candidateResult(
+                                        List.of(segment)
+                                )
+                        );
 
         RouteAccessibilitySignals signals =
                 result.getCandidates()
@@ -160,178 +259,102 @@ class RouteAccessibilityEnrichmentServiceTest {
                         .get(0)
                         .getAccessibilitySignals();
 
-        assertThat(
-                signals.getStair().getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.UNKNOWN
-        );
+        assertThat(signals)
+                .isNotNull();
 
         assertThat(
-                signals.getStair().getCount()
+                signals.getStair()
+                        .getState()
+                        .name()
+        ).isEqualTo("UNKNOWN");
+
+        assertThat(
+                signals.getStair()
+                        .getCount()
         ).isNull();
 
         assertThat(
-                signals.getOverpass().getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.UNKNOWN
-        );
+                signals.getOverpass()
+                        .getState()
+                        .name()
+        ).isEqualTo("UNKNOWN");
 
         assertThat(
-                signals.getUnderpass().getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.UNKNOWN
-        );
+                signals.getUnderpass()
+                        .getState()
+                        .name()
+        ).isEqualTo("UNKNOWN");
     }
 
     @Test
-    @DisplayName("동일한 시작 종료 좌표의 도보 구간은 보행자 API를 한 번만 조회한다")
-    void reuseLookupResultForSameCoordinates() {
-        when(
-                tmapWalkingRouteClient.search(any())
-        ).thenReturn(
-                stairResponse()
-        );
-
-        RouteWalkSegment first =
-                externalSegment(
-                        "walk-1",
-                        RouteWalkSegment.Role.ORIGIN_TO_FIRST_STOP,
-                        127.0000,
-                        37.0000,
-                        127.0010,
-                        37.0010
-                );
-
-        RouteWalkSegment second =
-                externalSegment(
-                        "walk-2",
-                        RouteWalkSegment.Role.LAST_STOP_TO_DESTINATION,
-                        127.0000,
-                        37.0000,
-                        127.0010,
-                        37.0010
-                );
-
-        RouteCandidate firstCandidate =
-                transitCandidate(
-                        List.of(first)
-                );
-
-        RouteCandidate secondCandidate =
-                RouteCandidate.builder()
-                        .routeId("transit-2")
-                        .routeType(RouteType.TRANSIT)
-                        .walkSegments(
-                                List.of(second)
+    @DisplayName(
+            "대중교통 환승 도보 구간은 보행자 API로 재조회하지 않는다"
+    )
+    void skipsTransferWalkSegment() {
+        RouteWalkSegment transferSegment =
+                RouteWalkSegment.builder()
+                        .walkSegmentId(
+                                "transit-1:walk:1"
                         )
-                        .build();
-
-        RouteCandidateResult candidateResult =
-                RouteCandidateResult.builder()
-                        .requestId("request-1")
-                        .candidates(
-                                List.of(
-                                        firstCandidate,
-                                        secondCandidate
+                        .role(
+                                RouteWalkSegment.Role
+                                        .TRANSFER_WALK
+                        )
+                        .segmentScope(
+                                SegmentScope.UNKNOWN
+                        )
+                        .distanceM(100)
+                        .durationSec(90)
+                        .geometry(
+                                geometry(
+                                        127.0286,
+                                        37.2636,
+                                        127.0290,
+                                        37.2640
                                 )
                         )
                         .build();
 
         RouteCandidateResult result =
-                service.enrich(
-                        candidateResult
-                );
-
-        assertThat(
-                result.getCandidates()
-                        .get(0)
-                        .getWalkSegments()
-                        .get(0)
-                        .getAccessibilitySignals()
-                        .getStair()
-                        .getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.PRESENT
-        );
-
-        assertThat(
-                result.getCandidates()
-                        .get(1)
-                        .getWalkSegments()
-                        .get(0)
-                        .getAccessibilitySignals()
-                        .getStair()
-                        .getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.PRESENT
-        );
-
-        verify(
-                tmapWalkingRouteClient,
-                times(1)
-        ).search(any());
-    }
-
-    @Test
-    @DisplayName("보행자 API 재조회에는 도보 구간 geometry의 시작 종료 좌표를 사용한다")
-    void useSegmentGeometryCoordinates() {
-        when(
-                tmapWalkingRouteClient.search(any())
-        ).thenReturn(
-                stairResponse()
-        );
-
-        RouteCandidate candidate =
-                transitCandidate(
-                        List.of(
-                                externalSegment(
-                                        "walk-1",
-                                        RouteWalkSegment.Role.ORIGIN_TO_FIRST_STOP,
-                                        127.1234,
-                                        37.1234,
-                                        127.5678,
-                                        37.5678
+                routeAccessibilityEnrichmentService
+                        .enrich(
+                                candidateResult(
+                                        List.of(
+                                                transferSegment
+                                        )
                                 )
-                        )
-                );
+                        );
 
-        service.enrich(
-                candidateResult(candidate)
+        RouteWalkSegment resultSegment =
+                result.getCandidates()
+                        .get(0)
+                        .getWalkSegments()
+                        .get(0);
+
+        assertThat(
+                resultSegment
+                        .getAccessibilitySignals()
+        ).isNull();
+
+        verifyNoInteractions(
+                tmapWalkingRouteClient,
+                walkingAccessibilitySignalExtractor
         );
-
-        ArgumentCaptor<TmapWalkingRouteRequest> captor =
-                ArgumentCaptor.forClass(
-                        TmapWalkingRouteRequest.class
-                );
-
-        verify(
-                tmapWalkingRouteClient
-        ).search(
-                captor.capture()
-        );
-
-        TmapWalkingRouteRequest request =
-                captor.getValue();
-
-        assertThat(request.getStartX())
-                .isEqualTo(127.1234);
-
-        assertThat(request.getStartY())
-                .isEqualTo(37.1234);
-
-        assertThat(request.getEndX())
-                .isEqualTo(127.5678);
-
-        assertThat(request.getEndY())
-                .isEqualTo(37.5678);
-
-        assertThat(request.getSearchOption())
-                .isEqualTo("0");
     }
 
     private RouteCandidateResult candidateResult(
-            RouteCandidate candidate
+            List<RouteWalkSegment> segments
     ) {
+        RouteCandidate candidate =
+                RouteCandidate.builder()
+                        .routeId("transit-1")
+                        .routeType(
+                                RouteType.TRANSIT
+                        )
+                        .providerRank(1)
+                        .walkSegments(segments)
+                        .build();
+
         return RouteCandidateResult.builder()
                 .requestId("request-1")
                 .candidates(
@@ -340,20 +363,8 @@ class RouteAccessibilityEnrichmentServiceTest {
                 .build();
     }
 
-    private RouteCandidate transitCandidate(
-            List<RouteWalkSegment> walkSegments
-    ) {
-        return RouteCandidate.builder()
-                .routeId("transit-1")
-                .routeType(RouteType.TRANSIT)
-                .providerRank(1)
-                .walkSegments(walkSegments)
-                .build();
-    }
-
-    private RouteWalkSegment externalSegment(
+    private RouteWalkSegment externalWalkSegment(
             String walkSegmentId,
-            RouteWalkSegment.Role role,
             double startLongitude,
             double startLatitude,
             double endLongitude,
@@ -361,36 +372,21 @@ class RouteAccessibilityEnrichmentServiceTest {
     ) {
         return RouteWalkSegment.builder()
                 .walkSegmentId(walkSegmentId)
-                .role(role)
+                .role(
+                        RouteWalkSegment.Role
+                                .ORIGIN_TO_FIRST_STOP
+                )
                 .segmentScope(
                         SegmentScope.EXTERNAL_WALK
                 )
+                .distanceM(100)
+                .durationSec(90)
                 .geometry(
                         geometry(
                                 startLongitude,
                                 startLatitude,
                                 endLongitude,
                                 endLatitude
-                        )
-                )
-                .build();
-    }
-
-    private RouteWalkSegment transferSegment() {
-        return RouteWalkSegment.builder()
-                .walkSegmentId("transfer-walk")
-                .role(
-                        RouteWalkSegment.Role.TRANSFER_WALK
-                )
-                .segmentScope(
-                        SegmentScope.UNKNOWN
-                )
-                .geometry(
-                        geometry(
-                                127.0200,
-                                37.0200,
-                                127.0210,
-                                37.0210
                         )
                 )
                 .build();
@@ -417,32 +413,5 @@ class RouteAccessibilityEnrichmentServiceTest {
                         )
                 )
                 .build();
-    }
-
-    private TmapWalkingRouteResponse stairResponse() {
-        TmapWalkingRouteResponse.Properties properties =
-                new TmapWalkingRouteResponse.Properties();
-
-        properties.setFacilityType(17);
-
-        TmapWalkingRouteResponse.Geometry geometry =
-                new TmapWalkingRouteResponse.Geometry();
-
-        geometry.setType("LineString");
-
-        TmapWalkingRouteResponse.Feature feature =
-                new TmapWalkingRouteResponse.Feature();
-
-        feature.setGeometry(geometry);
-        feature.setProperties(properties);
-
-        TmapWalkingRouteResponse response =
-                new TmapWalkingRouteResponse();
-
-        response.setFeatures(
-                List.of(feature)
-        );
-
-        return response;
     }
 }

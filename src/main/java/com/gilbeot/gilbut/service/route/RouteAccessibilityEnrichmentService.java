@@ -11,69 +11,175 @@ import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteWalkSegment;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
-@RequiredArgsConstructor
 public class RouteAccessibilityEnrichmentService {
 
-    private static final String COORD_TYPE = "WGS84GEO";
-    private static final String DEFAULT_SEARCH_OPTION = "0";
-    private static final String START_NAME = "도보 구간 출발지";
-    private static final String END_NAME = "도보 구간 도착지";
+    private static final String COORD_TYPE =
+            "WGS84GEO";
 
-    private final TmapWalkingRouteClient tmapWalkingRouteClient;
-    private final WalkingAccessibilitySignalExtractor walkingAccessibilitySignalExtractor;
+    private static final String SEARCH_OPTION =
+            "0";
+
+    private final TmapWalkingRouteClient
+            tmapWalkingRouteClient;
+
+    private final WalkingAccessibilitySignalExtractor
+            walkingAccessibilitySignalExtractor;
+
+    private final Executor
+            routeAccessibilityExecutor;
+
+    public RouteAccessibilityEnrichmentService(
+            TmapWalkingRouteClient tmapWalkingRouteClient,
+            WalkingAccessibilitySignalExtractor
+                    walkingAccessibilitySignalExtractor,
+            @Qualifier("routeAccessibilityExecutor")
+            Executor routeAccessibilityExecutor
+    ) {
+        this.tmapWalkingRouteClient =
+                tmapWalkingRouteClient;
+        this.walkingAccessibilitySignalExtractor =
+                walkingAccessibilitySignalExtractor;
+        this.routeAccessibilityExecutor =
+                routeAccessibilityExecutor;
+    }
 
     public RouteCandidateResult enrich(
             RouteCandidateResult candidateResult
     ) {
-        Map<SegmentCoordinates, RouteAccessibilitySignals> cache =
-                new HashMap<>();
+        if (candidateResult == null) {
+            return null;
+        }
+
+        List<RouteCandidate> candidates =
+                candidateResult.getCandidates();
+
+        if (candidates == null
+                || candidates.isEmpty()) {
+            return candidateResult;
+        }
+
+        Map<
+                SegmentCoordinates,
+                CompletableFuture<RouteAccessibilitySignals>
+                > signalFutures =
+                createSignalFutures(candidates);
 
         List<RouteCandidate> enrichedCandidates =
-                candidateResult.getCandidates()
-                        .stream()
-                        .map(candidate ->
-                                enrichCandidate(
-                                        candidate,
-                                        cache
-                                )
+                candidates.stream()
+                        .map(
+                                candidate ->
+                                        enrichCandidate(
+                                                candidate,
+                                                signalFutures
+                                        )
                         )
                         .toList();
 
         return RouteCandidateResult.builder()
-                .requestId(candidateResult.getRequestId())
+                .requestId(
+                        candidateResult.getRequestId()
+                )
                 .candidates(enrichedCandidates)
-                .walkingRoute(candidateResult.getWalkingRoute())
-                .transitRoutes(candidateResult.getTransitRoutes())
+                .walkingRoute(
+                        candidateResult.getWalkingRoute()
+                )
+                .transitRoutes(
+                        candidateResult.getTransitRoutes()
+                )
                 .build();
+    }
+
+    private Map<
+            SegmentCoordinates,
+            CompletableFuture<RouteAccessibilitySignals>
+            > createSignalFutures(
+            List<RouteCandidate> candidates
+    ) {
+        Map<
+                SegmentCoordinates,
+                CompletableFuture<RouteAccessibilitySignals>
+                > futures =
+                new LinkedHashMap<>();
+
+        for (RouteCandidate candidate : candidates) {
+            if (!isTransitCandidate(candidate)) {
+                continue;
+            }
+
+            List<RouteWalkSegment> segments =
+                    candidate.getWalkSegments();
+
+            if (segments == null
+                    || segments.isEmpty()) {
+                continue;
+            }
+
+            for (RouteWalkSegment segment : segments) {
+                if (!shouldEnrich(segment)) {
+                    continue;
+                }
+
+                SegmentCoordinates coordinates =
+                        extractCoordinates(segment);
+
+                if (coordinates == null) {
+                    continue;
+                }
+
+                futures.computeIfAbsent(
+                        coordinates,
+                        key ->
+                                CompletableFuture.supplyAsync(
+                                        () ->
+                                                lookupAccessibilitySignals(
+                                                        key
+                                                ),
+                                        routeAccessibilityExecutor
+                                )
+                );
+            }
+        }
+
+        return futures;
     }
 
     private RouteCandidate enrichCandidate(
             RouteCandidate candidate,
-            Map<SegmentCoordinates, RouteAccessibilitySignals> cache
+            Map<
+                    SegmentCoordinates,
+                    CompletableFuture<RouteAccessibilitySignals>
+                    > signalFutures
     ) {
-        if (candidate == null
-                || candidate.getRouteType() != RouteType.TRANSIT
-                || candidate.getWalkSegments() == null
-                || candidate.getWalkSegments().isEmpty()) {
+        if (!isTransitCandidate(candidate)) {
+            return candidate;
+        }
+
+        List<RouteWalkSegment> segments =
+                candidate.getWalkSegments();
+
+        if (segments == null
+                || segments.isEmpty()) {
             return candidate;
         }
 
         List<RouteWalkSegment> enrichedSegments =
-                candidate.getWalkSegments()
-                        .stream()
-                        .map(segment ->
-                                enrichSegment(
-                                        segment,
-                                        cache
-                                )
+                segments.stream()
+                        .map(
+                                segment ->
+                                        enrichSegment(
+                                                segment,
+                                                signalFutures
+                                        )
                         )
                         .toList();
 
@@ -84,7 +190,10 @@ public class RouteAccessibilityEnrichmentService {
 
     private RouteWalkSegment enrichSegment(
             RouteWalkSegment segment,
-            Map<SegmentCoordinates, RouteAccessibilitySignals> cache
+            Map<
+                    SegmentCoordinates,
+                    CompletableFuture<RouteAccessibilitySignals>
+                    > signalFutures
     ) {
         if (!shouldEnrich(segment)) {
             return segment;
@@ -93,22 +202,88 @@ public class RouteAccessibilityEnrichmentService {
         SegmentCoordinates coordinates =
                 extractCoordinates(segment);
 
-        RouteAccessibilitySignals signals;
-
         if (coordinates == null) {
-            signals =
-                    RouteAccessibilitySignals.unknown();
-        } else {
-            signals =
-                    cache.computeIfAbsent(
-                            coordinates,
-                            this::lookupAccessibilitySignals
-                    );
+            return segment;
         }
+
+        CompletableFuture<RouteAccessibilitySignals>
+                signalFuture =
+                signalFutures.get(coordinates);
+
+        if (signalFuture == null) {
+            return segment;
+        }
+
+        RouteAccessibilitySignals signals =
+                signalFuture.join();
 
         return segment.toBuilder()
                 .accessibilitySignals(signals)
                 .build();
+    }
+
+    private RouteAccessibilitySignals
+    lookupAccessibilitySignals(
+            SegmentCoordinates coordinates
+    ) {
+        try {
+            TmapWalkingRouteResponse response =
+                    tmapWalkingRouteClient.search(
+                            toWalkingRouteRequest(
+                                    coordinates
+                            )
+                    );
+
+            return walkingAccessibilitySignalExtractor
+                    .extract(response);
+
+        } catch (CustomException e) {
+            if (e.getErrorCode()
+                    == ErrorCode.ROUTE_SEARCH_FAILED) {
+
+                return RouteAccessibilitySignals
+                        .unknown();
+            }
+
+            throw e;
+        }
+    }
+
+    private TmapWalkingRouteRequest
+    toWalkingRouteRequest(
+            SegmentCoordinates coordinates
+    ) {
+        return TmapWalkingRouteRequest.builder()
+                .startX(
+                        coordinates.startLongitude()
+                )
+                .startY(
+                        coordinates.startLatitude()
+                )
+                .endX(
+                        coordinates.endLongitude()
+                )
+                .endY(
+                        coordinates.endLatitude()
+                )
+                .reqCoordType(COORD_TYPE)
+                .resCoordType(COORD_TYPE)
+                .startName(
+                        "도보 구간 출발지"
+                )
+                .endName(
+                        "도보 구간 도착지"
+                )
+                .searchOption(SEARCH_OPTION)
+                .build();
+    }
+
+    private boolean isTransitCandidate(
+            RouteCandidate candidate
+    ) {
+        return candidate != null
+                && candidate.getRouteType()
+                == RouteType.TRANSIT;
     }
 
     private boolean shouldEnrich(
@@ -117,7 +292,8 @@ public class RouteAccessibilityEnrichmentService {
         return segment != null
                 && segment.getSegmentScope()
                 == SegmentScope.EXTERNAL_WALK
-                && segment.getAccessibilitySignals() == null;
+                && segment.getAccessibilitySignals()
+                == null;
     }
 
     private SegmentCoordinates extractCoordinates(
@@ -127,8 +303,10 @@ public class RouteAccessibilityEnrichmentService {
                 segment.getGeometry();
 
         if (geometry == null
-                || geometry.getCoordinates() == null
-                || geometry.getCoordinates().size() < 2) {
+                || geometry.getCoordinates()
+                == null
+                || geometry.getCoordinates().size()
+                < 2) {
             return null;
         }
 
@@ -143,8 +321,8 @@ public class RouteAccessibilityEnrichmentService {
                         coordinates.size() - 1
                 );
 
-        if (!isValidCoordinatePair(start)
-                || !isValidCoordinatePair(end)) {
+        if (!isValidCoordinate(start)
+                || !isValidCoordinate(end)) {
             return null;
         }
 
@@ -156,78 +334,41 @@ public class RouteAccessibilityEnrichmentService {
         );
     }
 
-    private boolean isValidCoordinatePair(
+    private boolean isValidCoordinate(
             List<Double> coordinate
     ) {
         if (coordinate == null
-                || coordinate.size() < 2
-                || coordinate.get(0) == null
-                || coordinate.get(1) == null) {
+                || coordinate.size() < 2) {
             return false;
         }
 
-        double longitude =
+        Double longitude =
                 coordinate.get(0);
 
-        double latitude =
+        Double latitude =
                 coordinate.get(1);
 
-        return Double.isFinite(longitude)
-                && Double.isFinite(latitude)
-                && longitude >= -180
-                && longitude <= 180
-                && latitude >= -90
-                && latitude <= 90
-                && !(longitude == 0
-                && latitude == 0);
-    }
-
-    private RouteAccessibilitySignals lookupAccessibilitySignals(
-            SegmentCoordinates coordinates
-    ) {
-        try {
-            TmapWalkingRouteResponse response =
-                    tmapWalkingRouteClient.search(
-                            toWalkingRouteRequest(
-                                    coordinates
-                            )
-                    );
-
-            return walkingAccessibilitySignalExtractor.extract(
-                    response
-            );
-
-        } catch (CustomException e) {
-            if (e.getErrorCode()
-                    == ErrorCode.ROUTE_SEARCH_FAILED) {
-                return RouteAccessibilitySignals.unknown();
-            }
-
-            throw e;
+        if (longitude == null
+                || latitude == null) {
+            return false;
         }
-    }
 
-    private TmapWalkingRouteRequest toWalkingRouteRequest(
-            SegmentCoordinates coordinates
-    ) {
-        return TmapWalkingRouteRequest.builder()
-                .startX(coordinates.startLongitude())
-                .startY(coordinates.startLatitude())
-                .endX(coordinates.endLongitude())
-                .endY(coordinates.endLatitude())
-                .reqCoordType(COORD_TYPE)
-                .resCoordType(COORD_TYPE)
-                .startName(START_NAME)
-                .endName(END_NAME)
-                .searchOption(DEFAULT_SEARCH_OPTION)
-                .build();
+        if (!Double.isFinite(longitude)
+                || !Double.isFinite(latitude)) {
+            return false;
+        }
+
+        return longitude >= -180.0
+                && longitude <= 180.0
+                && latitude >= -90.0
+                && latitude <= 90.0;
     }
 
     private record SegmentCoordinates(
-            double startLongitude,
-            double startLatitude,
-            double endLongitude,
-            double endLatitude
+            Double startLongitude,
+            Double startLatitude,
+            Double endLongitude,
+            Double endLatitude
     ) {
     }
 }
