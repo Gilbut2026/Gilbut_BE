@@ -34,6 +34,7 @@ public class AiRouteScoringResponse {
         private Integer rank;
         private List<FilterCode> filterCodes;
         private ScoreBreakdown scoreBreakdown;
+        private SlopeSummary slopeSummary;
     }
 
     @Getter
@@ -47,6 +48,30 @@ public class AiRouteScoringResponse {
         private Double obstaclePenalty;
         private Double transferPenalty;
         private Double weatherPenalty;
+        private Double slopePenalty;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SlopeSummary {
+
+        private SlopeAnalysisStatus status;
+        private Integer sampleIntervalM;
+        private Integer analyzedSegmentCount;
+        private Integer totalEligibleSegmentCount;
+        private Double maxUphillGradePercent;
+        private Double maxDownhillGradePercent;
+        private Double totalAscentM;
+        private Double totalDescentM;
+    }
+
+    public enum SlopeAnalysisStatus {
+        NOT_REQUESTED,
+        SUCCESS,
+        PARTIAL,
+        FAILED
     }
 
     @Getter

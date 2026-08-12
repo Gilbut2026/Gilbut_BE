@@ -43,6 +43,9 @@ KAKAO_REDIRECT_URI=
 
 # TMAP
 TMAP_APP_KEY=
+
+# AI
+AI_SCORING_URL=http://localhost:8000/routes/score
 ```
 
 `.env` 파일에는 DB 비밀번호와 API Key가 포함되므로 Git에 올리지 않습니다.
@@ -216,6 +219,10 @@ API를 추가하거나 수정한 경우 다음 항목을 함께 업데이트합�
 - 오류 코드
 - 개발 현황
 - 프론트 연동 현황
+
+맞춤 경로 응답의 `recommendations[]`에는 AI가 반환한 `slopeSummary`와
+`scoreBreakdown.slopePenalty`가 포함됩니다. TMAP WALK 원본 좌표는 AI 호출에만
+사용하며 공개 `candidate` JSON에는 포함하지 않습니다.
 
 ---
 
