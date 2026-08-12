@@ -1,6 +1,8 @@
 package com.gilbeot.gilbut.client.ai.mapper;
 
 import com.gilbeot.gilbut.client.ai.dto.scoring.AiRouteScoringRequest;
+import com.gilbeot.gilbut.client.ai.dto.scoring.type.AccessibilitySignalState;
+import com.gilbeot.gilbut.dto.route.RouteAccessibilitySignals;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteMetrics;
@@ -76,6 +78,56 @@ public class AiRouteScoringRequestMapper {
                 .distanceM(segment.getDistanceM())
                 .durationSec(segment.getDurationSec())
                 .geometry(toGeometry(segment.getGeometry()))
+                .accessibilitySignals(
+                        toAccessibilitySignals(
+                                segment.getAccessibilitySignals()
+                        )
+                )
+                .build();
+    }
+
+    private AiRouteScoringRequest.AccessibilitySignals toAccessibilitySignals(
+            RouteAccessibilitySignals signals
+    ) {
+        if (signals == null) {
+            return null;
+        }
+
+        return AiRouteScoringRequest.AccessibilitySignals.builder()
+                .stair(
+                        toSignal(
+                                signals.getStair()
+                        )
+                )
+                .overpass(
+                        toSignal(
+                                signals.getOverpass()
+                        )
+                )
+                .underpass(
+                        toSignal(
+                                signals.getUnderpass()
+                        )
+                )
+                .build();
+    }
+
+    private AiRouteScoringRequest.Signal toSignal(
+            RouteAccessibilitySignals.Signal signal
+    ) {
+        if (signal == null) {
+            return null;
+        }
+
+        return AiRouteScoringRequest.Signal.builder()
+                .state(
+                        signal.getState() == null
+                                ? null
+                                : AccessibilitySignalState.valueOf(
+                                signal.getState().name()
+                        )
+                )
+                .count(signal.getCount())
                 .build();
     }
 

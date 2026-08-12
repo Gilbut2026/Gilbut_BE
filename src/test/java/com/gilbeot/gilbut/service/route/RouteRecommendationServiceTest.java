@@ -7,11 +7,11 @@ import com.gilbeot.gilbut.client.ai.dto.scoring.type.ScoringResultStatus;
 import com.gilbeot.gilbut.client.ai.mapper.AiRouteScoringRequestMapper;
 import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
+import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
-import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
-import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteMetrics;
+import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
@@ -35,6 +35,9 @@ class RouteRecommendationServiceTest {
     private RouteCandidateAggregationService routeCandidateAggregationService;
 
     @Mock
+    private RouteAccessibilityEnrichmentService routeAccessibilityEnrichmentService;
+
+    @Mock
     private UserMobilityProfileService userMobilityProfileService;
 
     @Mock
@@ -50,6 +53,7 @@ class RouteRecommendationServiceTest {
         routeRecommendationService =
                 new RouteRecommendationService(
                         routeCandidateAggregationService,
+                        routeAccessibilityEnrichmentService,
                         userMobilityProfileService,
                         aiRouteScoringRequestMapper,
                         aiRouteScoringClient
@@ -131,6 +135,11 @@ class RouteRecommendationServiceTest {
         when(
                 routeCandidateAggregationService
                         .createCandidates(request)
+        ).thenReturn(candidateResult);
+
+        when(
+                routeAccessibilityEnrichmentService
+                        .enrich(candidateResult)
         ).thenReturn(candidateResult);
 
         when(
@@ -223,6 +232,11 @@ class RouteRecommendationServiceTest {
         when(
                 routeCandidateAggregationService
                         .createCandidates(request)
+        ).thenReturn(candidateResult);
+
+        when(
+                routeAccessibilityEnrichmentService
+                        .enrich(candidateResult)
         ).thenReturn(candidateResult);
 
         when(

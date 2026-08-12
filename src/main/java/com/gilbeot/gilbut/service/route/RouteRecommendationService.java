@@ -28,6 +28,7 @@ import java.util.Set;
 public class RouteRecommendationService {
 
     private final RouteCandidateAggregationService routeCandidateAggregationService;
+    private final RouteAccessibilityEnrichmentService routeAccessibilityEnrichmentService;
     private final UserMobilityProfileService userMobilityProfileService;
     private final AiRouteScoringRequestMapper aiRouteScoringRequestMapper;
     private final AiRouteScoringClient aiRouteScoringClient;
@@ -39,6 +40,11 @@ public class RouteRecommendationService {
         RouteCandidateResult candidateResult =
                 routeCandidateAggregationService.createCandidates(
                         request
+                );
+
+        candidateResult =
+                routeAccessibilityEnrichmentService.enrich(
+                        candidateResult
                 );
 
         MobilityProfileResponse mobilityProfile =
