@@ -5,6 +5,7 @@ import com.gilbeot.gilbut.client.ai.dto.scoring.AiRouteScoringRequest;
 import com.gilbeot.gilbut.client.ai.dto.scoring.AiRouteScoringResponse;
 import com.gilbeot.gilbut.client.ai.dto.scoring.type.ScoringResultStatus;
 import com.gilbeot.gilbut.client.ai.mapper.AiRouteScoringRequestMapper;
+import com.gilbeot.gilbut.dto.drt.DrtGuideResponse;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
@@ -13,6 +14,7 @@ import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class RouteRecommendationService {
     private final UserMobilityProfileService userMobilityProfileService;
     private final AiRouteScoringRequestMapper aiRouteScoringRequestMapper;
     private final AiRouteScoringClient aiRouteScoringClient;
+    private final DrtGuideService drtGuideService;
 
     public RouteRecommendationResult recommend(
             Long userId,
@@ -68,9 +71,16 @@ public class RouteRecommendationService {
                 scoringResponse
         );
 
+        DrtGuideResponse drtGuide =
+                drtGuideService.createGuide(
+                        request,
+                        scoringResponse.getDrtDecision()
+                );
+
         return buildResult(
                 candidateResult,
-                scoringResponse
+                scoringResponse,
+                drtGuide
         );
     }
 
@@ -82,6 +92,7 @@ public class RouteRecommendationService {
                 || scoringResponse.getRequestId() == null
                 || !candidateResult.getRequestId()
                 .equals(scoringResponse.getRequestId())) {
+
             throw new CustomException(
                     ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
             );
@@ -102,8 +113,14 @@ public class RouteRecommendationService {
         Set<String> candidateRouteIds =
                 candidateResult.getCandidates()
                         .stream()
-                        .map(RouteCandidate::getRouteId)
-                        .collect(HashSet::new, Set::add, Set::addAll);
+                        .map(
+                                RouteCandidate::getRouteId
+                        )
+                        .collect(
+                                HashSet::new,
+                                Set::add,
+                                Set::addAll
+                        );
 
         Set<String> responseRouteIds =
                 new HashSet<>();
@@ -120,6 +137,7 @@ public class RouteRecommendationService {
                     || !responseRouteIds.add(
                     result.getRouteId()
             )) {
+
                 throw new CustomException(
                         ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
                 );
@@ -129,6 +147,7 @@ public class RouteRecommendationService {
                     == ScoringResultStatus.SCORED
                     && (result.getScore() == null
                     || result.getRank() == null)) {
+
                 throw new CustomException(
                         ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
                 );
@@ -147,9 +166,11 @@ public class RouteRecommendationService {
                 && scoringResponse.getDrtDecision()
                 .getBasedOnRouteId() != null
                 && !candidateRouteIds.contains(
-                scoringResponse.getDrtDecision()
+                scoringResponse
+                        .getDrtDecision()
                         .getBasedOnRouteId()
         )) {
+
             throw new CustomException(
                     ErrorCode.AI_ROUTE_SCORING_RESPONSE_INVALID
             );
@@ -158,13 +179,15 @@ public class RouteRecommendationService {
 
     private RouteRecommendationResult buildResult(
             RouteCandidateResult candidateResult,
-            AiRouteScoringResponse scoringResponse
+            AiRouteScoringResponse scoringResponse,
+            DrtGuideResponse drtGuide
     ) {
         Map<String, RouteCandidate> candidateMap =
                 new HashMap<>();
 
         for (RouteCandidate candidate
                 : candidateResult.getCandidates()) {
+
             candidateMap.put(
                     candidate.getRouteId(),
                     candidate
@@ -174,52 +197,58 @@ public class RouteRecommendationService {
         List<RouteRecommendationItem> recommendations =
                 scoringResponse.getResults()
                         .stream()
-                        .filter(result ->
-                                result.getStatus()
-                                        == ScoringResultStatus.SCORED
+                        .filter(
+                                result ->
+                                        result.getStatus()
+                                                == ScoringResultStatus.SCORED
                         )
-                        .sorted((first, second) ->
-                                Integer.compare(
-                                        first.getRank(),
-                                        second.getRank()
-                                )
-                        )
-                        .map(result ->
-                                RouteRecommendationItem.builder()
-                                        .routeId(
-                                                result.getRouteId()
+                        .sorted(
+                                (first, second) ->
+                                        Integer.compare(
+                                                first.getRank(),
+                                                second.getRank()
                                         )
-                                        .candidate(
-                                                candidateMap.get(
+                        )
+                        .map(
+                                result ->
+                                        RouteRecommendationItem
+                                                .builder()
+                                                .routeId(
                                                         result.getRouteId()
                                                 )
-                                        )
-                                        .score(
-                                                result.getScore()
-                                        )
-                                        .rank(
-                                                result.getRank()
-                                        )
-                                        .scoreBreakdown(
-                                                result.getScoreBreakdown()
-                                        )
-                                        .slopeSummary(
-                                                result.getSlopeSummary()
-                                        )
-                                        .build()
+                                                .candidate(
+                                                        candidateMap.get(
+                                                                result.getRouteId()
+                                                        )
+                                                )
+                                                .score(
+                                                        result.getScore()
+                                                )
+                                                .rank(
+                                                        result.getRank()
+                                                )
+                                                .scoreBreakdown(
+                                                        result.getScoreBreakdown()
+                                                )
+                                                .slopeSummary(
+                                                        result.getSlopeSummary()
+                                                )
+                                                .build()
                         )
                         .toList();
 
         List<AiRouteScoringResponse.Result> filteredResults =
                 scoringResponse.getResults()
                         .stream()
-                        .filter(result ->
-                                result.getStatus()
-                                        == ScoringResultStatus.FILTERED
+                        .filter(
+                                result ->
+                                        result.getStatus()
+                                                == ScoringResultStatus.FILTERED
                         )
                         .toList();
 
-        return RouteRecommendationResult.builder()
+        return RouteRecommendationResult
+                .builder()
                 .requestId(
                         candidateResult.getRequestId()
                 )
@@ -234,6 +263,9 @@ public class RouteRecommendationService {
                 )
                 .drtDecision(
                         scoringResponse.getDrtDecision()
+                )
+                .drtGuide(
+                        drtGuide
                 )
                 .walkingRoute(
                         candidateResult.getWalkingRoute()

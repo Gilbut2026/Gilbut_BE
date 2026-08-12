@@ -14,6 +14,7 @@ import com.gilbeot.gilbut.dto.route.RouteMetrics;
 import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,21 +33,31 @@ import static org.mockito.Mockito.when;
 class RouteRecommendationServiceTest {
 
     @Mock
-    private RouteCandidateAggregationService routeCandidateAggregationService;
+    private RouteCandidateAggregationService
+            routeCandidateAggregationService;
 
     @Mock
-    private RouteAccessibilityEnrichmentService routeAccessibilityEnrichmentService;
+    private RouteAccessibilityEnrichmentService
+            routeAccessibilityEnrichmentService;
 
     @Mock
-    private UserMobilityProfileService userMobilityProfileService;
+    private UserMobilityProfileService
+            userMobilityProfileService;
 
     @Mock
-    private AiRouteScoringRequestMapper aiRouteScoringRequestMapper;
+    private AiRouteScoringRequestMapper
+            aiRouteScoringRequestMapper;
 
     @Mock
-    private AiRouteScoringClient aiRouteScoringClient;
+    private AiRouteScoringClient
+            aiRouteScoringClient;
 
-    private RouteRecommendationService routeRecommendationService;
+    @Mock
+    private DrtGuideService
+            drtGuideService;
+
+    private RouteRecommendationService
+            routeRecommendationService;
 
     @BeforeEach
     void setUp() {
@@ -56,14 +67,14 @@ class RouteRecommendationServiceTest {
                         routeAccessibilityEnrichmentService,
                         userMobilityProfileService,
                         aiRouteScoringRequestMapper,
-                        aiRouteScoringClient
+                        aiRouteScoringClient,
+                        drtGuideService
                 );
     }
 
     @Test
     @DisplayName("AI 스코어링 결과를 순위대로 경로 후보와 매칭한다")
     void recommend() {
-
         Long userId = 1L;
 
         RouteCandidateRequest request =
@@ -77,7 +88,9 @@ class RouteRecommendationServiceTest {
         RouteCandidate candidate =
                 RouteCandidate.builder()
                         .routeId("walking-1")
-                        .routeType(RouteType.WALKING)
+                        .routeType(
+                                RouteType.WALKING
+                        )
                         .routeOption(
                                 WalkingRouteOption.DEFAULT
                         )
@@ -101,82 +114,110 @@ class RouteRecommendationServiceTest {
                         .build();
 
         MobilityProfileResponse mobilityProfile =
-                MobilityProfileResponse.builder()
+                MobilityProfileResponse
+                        .builder()
                         .build();
 
         AiRouteScoringRequest scoringRequest =
                 AiRouteScoringRequest.builder()
                         .requestId("request-1")
-                        .candidates(List.of())
+                        .candidates(
+                                List.of()
+                        )
                         .build();
 
         AiRouteScoringResponse.Result scoringResult =
-                AiRouteScoringResponse.Result.builder()
+                AiRouteScoringResponse
+                        .Result
+                        .builder()
                         .routeId("walking-1")
                         .status(
                                 ScoringResultStatus.SCORED
                         )
                         .score(92.0)
                         .rank(1)
-                        .filterCodes(List.of())
+                        .filterCodes(
+                                List.of()
+                        )
                         .build();
 
         AiRouteScoringResponse scoringResponse =
-                AiRouteScoringResponse.builder()
+                AiRouteScoringResponse
+                        .builder()
                         .requestId("request-1")
                         .scoringVersion(
                                 "accessibility-score-v1"
                         )
                         .results(
-                                List.of(scoringResult)
+                                List.of(
+                                        scoringResult
+                                )
                         )
                         .build();
 
         when(
                 routeCandidateAggregationService
                         .createCandidates(request)
-        ).thenReturn(candidateResult);
+        ).thenReturn(
+                candidateResult
+        );
 
         when(
                 routeAccessibilityEnrichmentService
                         .enrich(candidateResult)
-        ).thenReturn(candidateResult);
+        ).thenReturn(
+                candidateResult
+        );
 
         when(
                 userMobilityProfileService
                         .getMobilityProfile(userId)
-        ).thenReturn(mobilityProfile);
+        ).thenReturn(
+                mobilityProfile
+        );
 
         when(
-                aiRouteScoringRequestMapper.toRequest(
-                        mobilityProfile,
-                        candidateResult
-                )
-        ).thenReturn(scoringRequest);
+                aiRouteScoringRequestMapper
+                        .toRequest(
+                                mobilityProfile,
+                                candidateResult
+                        )
+        ).thenReturn(
+                scoringRequest
+        );
 
         when(
                 aiRouteScoringClient.score(
                         scoringRequest
                 )
-        ).thenReturn(scoringResponse);
+        ).thenReturn(
+                scoringResponse
+        );
 
         RouteRecommendationResult result =
-                routeRecommendationService.recommend(
-                        userId,
-                        request
-                );
+                routeRecommendationService
+                        .recommend(
+                                userId,
+                                request
+                        );
 
-        assertThat(result.getRequestId())
-                .isEqualTo("request-1");
+        assertThat(
+                result.getRequestId()
+        ).isEqualTo(
+                "request-1"
+        );
 
-        assertThat(result.getRecommendations())
-                .hasSize(1);
+        assertThat(
+                result.getRecommendations()
+        ).hasSize(1);
 
         assertThat(
                 result.getRecommendations()
                         .get(0)
                         .getRouteId()
-        ).isEqualTo("walking-1");
+        ).isEqualTo(
+                "walking-1"
+        );
 
         assertThat(
                 result.getRecommendations()
@@ -188,80 +229,110 @@ class RouteRecommendationServiceTest {
                 result.getRecommendations()
                         .get(0)
                         .getScore()
-        ).isEqualTo(92.0);
+        ).isEqualTo(
+                92.0
+        );
 
         assertThat(
                 result.getRecommendations()
                         .get(0)
                         .getCandidate()
-        ).isSameAs(candidate);
+        ).isSameAs(
+                candidate
+        );
     }
 
     @Test
     @DisplayName("AI 응답 requestId가 다르면 예외가 발생한다")
     void rejectsDifferentRequestId() {
-
         Long userId = 1L;
 
         RouteCandidateRequest request =
-                RouteCandidateRequest.builder()
+                RouteCandidateRequest
+                        .builder()
                         .build();
 
         RouteCandidateResult candidateResult =
                 RouteCandidateResult.builder()
                         .requestId("request-1")
-                        .candidates(List.of())
+                        .candidates(
+                                List.of()
+                        )
                         .build();
 
         MobilityProfileResponse mobilityProfile =
-                MobilityProfileResponse.builder()
+                MobilityProfileResponse
+                        .builder()
                         .build();
 
         AiRouteScoringRequest scoringRequest =
-                AiRouteScoringRequest.builder()
+                AiRouteScoringRequest
+                        .builder()
                         .requestId("request-1")
-                        .candidates(List.of())
+                        .candidates(
+                                List.of()
+                        )
                         .build();
 
         AiRouteScoringResponse scoringResponse =
-                AiRouteScoringResponse.builder()
-                        .requestId("different-request")
-                        .results(List.of())
+                AiRouteScoringResponse
+                        .builder()
+                        .requestId(
+                                "different-request"
+                        )
+                        .results(
+                                List.of()
+                        )
                         .build();
 
         when(
                 routeCandidateAggregationService
                         .createCandidates(request)
-        ).thenReturn(candidateResult);
+        ).thenReturn(
+                candidateResult
+        );
 
         when(
                 routeAccessibilityEnrichmentService
                         .enrich(candidateResult)
-        ).thenReturn(candidateResult);
+        ).thenReturn(
+                candidateResult
+        );
 
         when(
                 userMobilityProfileService
                         .getMobilityProfile(userId)
-        ).thenReturn(mobilityProfile);
+        ).thenReturn(
+                mobilityProfile
+        );
 
         when(
-                aiRouteScoringRequestMapper.toRequest(
-                        mobilityProfile,
-                        candidateResult
-                )
-        ).thenReturn(scoringRequest);
+                aiRouteScoringRequestMapper
+                        .toRequest(
+                                mobilityProfile,
+                                candidateResult
+                        )
+        ).thenReturn(
+                scoringRequest
+        );
 
         when(
                 aiRouteScoringClient.score(
                         scoringRequest
                 )
-        ).thenReturn(scoringResponse);
+        ).thenReturn(
+                scoringResponse
+        );
 
         assertThatThrownBy(
-                () -> routeRecommendationService.recommend(
-                        userId,
-                        request
-                )
-        ).isInstanceOf(CustomException.class);
+                () ->
+                        routeRecommendationService
+                                .recommend(
+                                        userId,
+                                        request
+                                )
+        ).isInstanceOf(
+                CustomException.class
+        );
     }
 }
