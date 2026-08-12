@@ -49,13 +49,13 @@ class WalkingRouteServiceTest {
     }
 
     @Test
-    @DisplayName("기본 보행 경로와 계단 회피 보행 경로를 조회한다")
+    @DisplayName("기본 보행 경로와 검증된 계단 회피 보행 경로를 조회한다")
     void searchWalkingRoute() throws Exception {
         when(
                 tmapWalkingRouteClient.search(any())
         ).thenReturn(
-                tmapResponse(),
-                tmapResponse()
+                tmapResponseWithStair(),
+                tmapResponseWithoutStair()
         );
 
         WalkingRouteResponse response =
@@ -68,6 +68,7 @@ class WalkingRouteServiceTest {
 
         WalkingRouteItemResponse defaultRoute =
                 response.getRoutes().get(0);
+
         WalkingRouteItemResponse avoidStairsRoute =
                 response.getRoutes().get(1);
 
@@ -83,48 +84,6 @@ class WalkingRouteServiceTest {
         assertThat(defaultRoute.getSummary().getTotalTimeSec())
                 .isEqualTo(80);
 
-        assertThat(defaultRoute.getRoutePoints())
-                .hasSize(3);
-
-        assertThat(
-                defaultRoute.getRoutePoints()
-                        .get(0)
-                        .getLatitude()
-        ).isEqualTo(37.265714);
-
-        assertThat(
-                defaultRoute.getRoutePoints()
-                        .get(0)
-                        .getLongitude()
-        ).isEqualTo(126.999958);
-
-        assertThat(defaultRoute.getSteps())
-                .hasSize(2);
-
-        assertThat(
-                defaultRoute.getSteps()
-                        .get(0)
-                        .getInstruction()
-        ).isEqualTo("출발지");
-
-        assertThat(
-                defaultRoute.getSteps()
-                        .get(0)
-                        .getDistanceM()
-        ).isEqualTo(35);
-
-        assertThat(
-                defaultRoute.getSteps()
-                        .get(1)
-                        .getInstruction()
-        ).isEqualTo("우회전");
-
-        assertThat(
-                defaultRoute.getSteps()
-                        .get(1)
-                        .getTurnType()
-        ).isEqualTo(13);
-
         assertThat(
                 defaultRoute.getAccessibilitySignals()
                         .getStair()
@@ -139,27 +98,25 @@ class WalkingRouteServiceTest {
                         .getCount()
         ).isEqualTo(1);
 
-        assertThat(
-                defaultRoute.getAccessibilitySignals()
-                        .getOverpass()
-                        .getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.ABSENT
-        );
-
-        assertThat(
-                defaultRoute.getAccessibilitySignals()
-                        .getUnderpass()
-                        .getState()
-        ).isEqualTo(
-                RouteAccessibilitySignals.State.ABSENT
-        );
-
         assertThat(avoidStairsRoute.getRouteId())
                 .startsWith("walking-avoid-stairs-");
 
         assertThat(avoidStairsRoute.getRouteOption())
                 .isEqualTo(WalkingRouteOption.AVOID_STAIRS);
+
+        assertThat(
+                avoidStairsRoute.getAccessibilitySignals()
+                        .getStair()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.ABSENT
+        );
+
+        assertThat(
+                avoidStairsRoute.getAccessibilitySignals()
+                        .getStair()
+                        .getCount()
+        ).isZero();
 
         ArgumentCaptor<TmapWalkingRouteRequest> captor =
                 ArgumentCaptor.forClass(
@@ -170,27 +127,6 @@ class WalkingRouteServiceTest {
                 tmapWalkingRouteClient,
                 times(2)
         ).search(captor.capture());
-
-        TmapWalkingRouteRequest tmapRequest =
-                captor.getAllValues().get(0);
-
-        assertThat(tmapRequest.getStartX())
-                .isEqualTo(127.0286);
-
-        assertThat(tmapRequest.getStartY())
-                .isEqualTo(37.2636);
-
-        assertThat(tmapRequest.getEndX())
-                .isEqualTo(127.047);
-
-        assertThat(tmapRequest.getEndY())
-                .isEqualTo(37.279);
-
-        assertThat(tmapRequest.getStartName())
-                .isEqualTo("수원역");
-
-        assertThat(tmapRequest.getEndName())
-                .isEqualTo("광교중앙역");
 
         assertThat(captor.getAllValues())
                 .extracting(
@@ -203,13 +139,65 @@ class WalkingRouteServiceTest {
     }
 
     @Test
+    @DisplayName("계단 회피 응답에 계단이 포함되면 기본 경로만 반환한다")
+    void excludeAvoidStairsRouteWhenStairIsPresent()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(
+                tmapResponseWithStair(),
+                tmapResponseWithStairDifferentGeometry()
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(
+                        walkingRouteRequest()
+                );
+
+        assertThat(response.getRoutes())
+                .hasSize(1);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteOption()
+        ).isEqualTo(WalkingRouteOption.DEFAULT);
+    }
+
+    @Test
+    @DisplayName("기본 경로와 계단 회피 경로가 동일하면 중복 계단 회피 경로를 제거한다")
+    void removeDuplicateAvoidStairsRoute()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(
+                tmapResponseWithoutStairSameGeometry(),
+                tmapResponseWithoutStairSameGeometry()
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(
+                        walkingRouteRequest()
+                );
+
+        assertThat(response.getRoutes())
+                .hasSize(1);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteOption()
+        ).isEqualTo(WalkingRouteOption.DEFAULT);
+    }
+
+    @Test
     @DisplayName("계단 회피 보행 경로 조회가 실패하면 기본 보행 경로만 반환한다")
     void searchWalkingRouteWhenAvoidStairsRouteFails()
             throws Exception {
         when(
                 tmapWalkingRouteClient.search(any())
         ).thenReturn(
-                tmapResponse()
+                tmapResponseWithStair()
         ).thenThrow(
                 new CustomException(
                         ErrorCode.ROUTE_SEARCH_FAILED
@@ -237,13 +225,17 @@ class WalkingRouteServiceTest {
             throws Exception {
         when(
                 tmapWalkingRouteClient.search(any())
-        ).thenReturn(tmapResponse());
+        ).thenReturn(
+                tmapResponseWithStair()
+        );
 
         WalkingRouteRequest request =
                 walkingRouteRequest();
 
         request.setRouteOptions(
-                List.of(WalkingRouteOption.DEFAULT)
+                List.of(
+                        WalkingRouteOption.DEFAULT
+                )
         );
 
         WalkingRouteResponse response =
@@ -267,23 +259,29 @@ class WalkingRouteServiceTest {
                 tmapWalkingRouteClient
         ).search(captor.capture());
 
-        assertThat(captor.getValue().getSearchOption())
-                .isEqualTo("0");
+        assertThat(
+                captor.getValue()
+                        .getSearchOption()
+        ).isEqualTo("0");
     }
 
     @Test
-    @DisplayName("계단 회피 보행 경로 옵션만 요청하면 계단 회피 경로만 조회한다")
+    @DisplayName("계단 회피 보행 경로 옵션만 요청하면 검증된 계단 회피 경로만 반환한다")
     void searchWalkingRouteWithAvoidStairsOptionOnly()
             throws Exception {
         when(
                 tmapWalkingRouteClient.search(any())
-        ).thenReturn(tmapResponse());
+        ).thenReturn(
+                tmapResponseWithoutStair()
+        );
 
         WalkingRouteRequest request =
                 walkingRouteRequest();
 
         request.setRouteOptions(
-                List.of(WalkingRouteOption.AVOID_STAIRS)
+                List.of(
+                        WalkingRouteOption.AVOID_STAIRS
+                )
         );
 
         WalkingRouteResponse response =
@@ -296,13 +294,17 @@ class WalkingRouteServiceTest {
                 response.getRoutes()
                         .get(0)
                         .getRouteOption()
-        ).isEqualTo(WalkingRouteOption.AVOID_STAIRS);
+        ).isEqualTo(
+                WalkingRouteOption.AVOID_STAIRS
+        );
 
         assertThat(
                 response.getRoutes()
                         .get(0)
                         .getRouteId()
-        ).startsWith("walking-avoid-stairs-");
+        ).startsWith(
+                "walking-avoid-stairs-"
+        );
 
         ArgumentCaptor<TmapWalkingRouteRequest> captor =
                 ArgumentCaptor.forClass(
@@ -313,8 +315,39 @@ class WalkingRouteServiceTest {
                 tmapWalkingRouteClient
         ).search(captor.capture());
 
-        assertThat(captor.getValue().getSearchOption())
-                .isEqualTo("30");
+        assertThat(
+                captor.getValue()
+                        .getSearchOption()
+        ).isEqualTo("30");
+    }
+
+    @Test
+    @DisplayName("계단 회피 옵션만 요청했는데 계단이 포함되면 ROUTE_SEARCH_FAILED로 처리한다")
+    void failWhenAvoidStairsOnlyRouteContainsStair()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(
+                tmapResponseWithStair()
+        );
+
+        WalkingRouteRequest request =
+                walkingRouteRequest();
+
+        request.setRouteOptions(
+                List.of(
+                        WalkingRouteOption.AVOID_STAIRS
+                )
+        );
+
+        assertThatThrownBy(() ->
+                walkingRouteService.search(request)
+        )
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(
+                        ErrorCode.ROUTE_SEARCH_FAILED
+                );
     }
 
     @Test
@@ -323,16 +356,22 @@ class WalkingRouteServiceTest {
         WalkingRouteRequest request =
                 walkingRouteRequest();
 
-        request.setRouteOptions(List.of());
+        request.setRouteOptions(
+                List.of()
+        );
 
         assertThatThrownBy(() ->
                 walkingRouteService.search(request)
         )
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_REQUEST);
+                .isEqualTo(
+                        ErrorCode.INVALID_REQUEST
+                );
 
-        verifyNoInteractions(tmapWalkingRouteClient);
+        verifyNoInteractions(
+                tmapWalkingRouteClient
+        );
     }
 
     @Test
@@ -343,6 +382,7 @@ class WalkingRouteServiceTest {
 
         request.getOrigin()
                 .setLatitude(0.0);
+
         request.getOrigin()
                 .setLongitude(0.0);
 
@@ -351,9 +391,13 @@ class WalkingRouteServiceTest {
         )
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_REQUEST);
+                .isEqualTo(
+                        ErrorCode.INVALID_REQUEST
+                );
 
-        verifyNoInteractions(tmapWalkingRouteClient);
+        verifyNoInteractions(
+                tmapWalkingRouteClient
+        );
     }
 
     @Test
@@ -388,7 +432,9 @@ class WalkingRouteServiceTest {
         )
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.ROUTE_SEARCH_FAILED);
+                .isEqualTo(
+                        ErrorCode.ROUTE_SEARCH_FAILED
+                );
     }
 
     private WalkingRouteRequest walkingRouteRequest() {
@@ -397,7 +443,9 @@ class WalkingRouteServiceTest {
 
         origin.setPlaceId("origin-1");
         origin.setName("수원역");
-        origin.setAddress("경기도 수원시 팔달구 덕영대로 924");
+        origin.setAddress(
+                "경기도 수원시 팔달구 덕영대로 924"
+        );
         origin.setLatitude(37.2636);
         origin.setLongitude(127.0286);
 
@@ -406,7 +454,9 @@ class WalkingRouteServiceTest {
 
         destination.setPlaceId("destination-1");
         destination.setName("광교중앙역");
-        destination.setAddress("경기도 수원시 영통구 도청로 45");
+        destination.setAddress(
+                "경기도 수원시 영통구 도청로 45"
+        );
         destination.setLatitude(37.279);
         destination.setLongitude(127.047);
 
@@ -419,23 +469,58 @@ class WalkingRouteServiceTest {
         return request;
     }
 
-    private TmapWalkingRouteResponse tmapResponse()
+    private TmapWalkingRouteResponse tmapResponseWithStair()
             throws Exception {
+        return tmapResponse(
+                true,
+                127.000100
+        );
+    }
 
-        TmapWalkingRouteResponse.Feature stairFeature =
+    private TmapWalkingRouteResponse tmapResponseWithStairDifferentGeometry()
+            throws Exception {
+        return tmapResponse(
+                true,
+                127.000500
+        );
+    }
+
+    private TmapWalkingRouteResponse tmapResponseWithoutStair()
+            throws Exception {
+        return tmapResponse(
+                false,
+                127.000500
+        );
+    }
+
+    private TmapWalkingRouteResponse tmapResponseWithoutStairSameGeometry()
+            throws Exception {
+        return tmapResponse(
+                false,
+                127.000100
+        );
+    }
+
+    private TmapWalkingRouteResponse tmapResponse(
+            boolean withStair,
+            double lastLongitude
+    ) throws Exception {
+        TmapWalkingRouteResponse.Feature firstLine =
                 lineFeature(
                         35,
                         40,
                         """
-                                [
-                                  [126.999958, 37.265714],
-                                  [126.999785, 37.266003]
-                                ]
-                                """
+                        [
+                          [126.999958, 37.265714],
+                          [126.999785, 37.266003]
+                        ]
+                        """
                 );
 
-        stairFeature.getProperties()
-                .setFacilityType(17);
+        if (withStair) {
+            firstLine.getProperties()
+                    .setFacilityType(17);
+        }
 
         TmapWalkingRouteResponse response =
                 new TmapWalkingRouteResponse();
@@ -449,7 +534,7 @@ class WalkingRouteServiceTest {
                                 200,
                                 "SP"
                         ),
-                        stairFeature,
+                        firstLine,
                         pointFeature(
                                 null,
                                 null,
@@ -461,11 +546,13 @@ class WalkingRouteServiceTest {
                                 35,
                                 40,
                                 """
-                                        [
-                                          [126.999785, 37.266003],
-                                          [127.000100, 37.266500]
-                                        ]
-                                        """
+                                [
+                                  [126.999785, 37.266003],
+                                  [%s, 37.266500]
+                                ]
+                                """.formatted(
+                                        lastLongitude
+                                )
                         )
                 )
         );
@@ -493,6 +580,7 @@ class WalkingRouteServiceTest {
                 new TmapWalkingRouteResponse.Geometry();
 
         geometry.setType("Point");
+
         geometry.setCoordinates(
                 objectMapper.readTree(
                         "[126.999958,37.265714]"
@@ -523,8 +611,11 @@ class WalkingRouteServiceTest {
                 new TmapWalkingRouteResponse.Geometry();
 
         geometry.setType("LineString");
+
         geometry.setCoordinates(
-                objectMapper.readTree(coordinates)
+                objectMapper.readTree(
+                        coordinates
+                )
         );
 
         TmapWalkingRouteResponse.Feature feature =

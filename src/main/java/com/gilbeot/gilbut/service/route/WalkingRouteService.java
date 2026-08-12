@@ -5,6 +5,7 @@ import com.gilbeot.gilbut.client.tmap.TmapWalkingRouteClient;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteRequest;
 import com.gilbeot.gilbut.client.tmap.dto.walking.TmapWalkingRouteResponse;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
+import com.gilbeot.gilbut.dto.route.RouteAccessibilitySignals;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
 import com.gilbeot.gilbut.dto.route.walking.response.RoutePointResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteItemResponse;
@@ -58,12 +59,20 @@ public class WalkingRouteService {
 
         resolveSearchOptions(request)
                 .forEach(option ->
-                        addRouteIfAvailable(
+                        findRouteIfAvailable(
                                 request,
-                                option,
-                                routes
+                                option
+                        ).filter(
+                                route -> isAcceptableRoute(
+                                        route,
+                                        option
+                                )
+                        ).ifPresent(
+                                routes::add
                         )
                 );
+
+        removeDuplicateAvoidStairsRoute(routes);
 
         if (routes.isEmpty()) {
             throw new CustomException(
@@ -122,10 +131,9 @@ public class WalkingRouteService {
         };
     }
 
-    private void addRouteIfAvailable(
+    private Optional<WalkingRouteItemResponse> findRouteIfAvailable(
             WalkingRouteRequest request,
-            WalkingRouteSearchOption option,
-            List<WalkingRouteItemResponse> routes
+            WalkingRouteSearchOption option
     ) {
         try {
             TmapWalkingRouteResponse tmapResponse =
@@ -136,7 +144,7 @@ public class WalkingRouteService {
                             )
                     );
 
-            routes.add(
+            return Optional.of(
                     toRouteItem(
                             tmapResponse,
                             option
@@ -148,7 +156,88 @@ public class WalkingRouteService {
                     != ErrorCode.ROUTE_SEARCH_FAILED) {
                 throw e;
             }
+
+            return Optional.empty();
         }
+    }
+
+    private boolean isAcceptableRoute(
+            WalkingRouteItemResponse route,
+            WalkingRouteSearchOption option
+    ) {
+        if (option.routeOption()
+                != WalkingRouteOption.AVOID_STAIRS) {
+            return true;
+        }
+
+        RouteAccessibilitySignals signals =
+                route.getAccessibilitySignals();
+
+        if (signals == null
+                || signals.getStair() == null) {
+            return false;
+        }
+
+        RouteAccessibilitySignals.Signal stair =
+                signals.getStair();
+
+        return stair.getState()
+                == RouteAccessibilitySignals.State.ABSENT
+                && Integer.valueOf(0)
+                .equals(stair.getCount());
+    }
+
+    private void removeDuplicateAvoidStairsRoute(
+            List<WalkingRouteItemResponse> routes
+    ) {
+        Optional<WalkingRouteItemResponse> defaultRoute =
+                routes.stream()
+                        .filter(route ->
+                                route.getRouteOption()
+                                        == WalkingRouteOption.DEFAULT
+                        )
+                        .findFirst();
+
+        if (defaultRoute.isEmpty()) {
+            return;
+        }
+
+        routes.removeIf(route ->
+                route.getRouteOption()
+                        == WalkingRouteOption.AVOID_STAIRS
+                        && hasSameGeometry(
+                        defaultRoute.get(),
+                        route
+                )
+        );
+    }
+
+    private boolean hasSameGeometry(
+            WalkingRouteItemResponse first,
+            WalkingRouteItemResponse second
+    ) {
+        List<RoutePointResponse> firstPoints =
+                first.getRoutePoints();
+
+        List<RoutePointResponse> secondPoints =
+                second.getRoutePoints();
+
+        if (firstPoints == null
+                || secondPoints == null
+                || firstPoints.size() != secondPoints.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < firstPoints.size(); i++) {
+            if (!isSamePoint(
+                    firstPoints.get(i),
+                    secondPoints.get(i)
+            )) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private TmapWalkingRouteRequest toTmapRequest(
