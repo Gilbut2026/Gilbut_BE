@@ -19,15 +19,8 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(
-        name = "route_histories",
-        indexes = {
-                @Index(
-                        name = "idx_route_histories_user_created_at",
-                        columnList = "user_id, created_at"
-                )
-        }
-)
+@Table(name = "route_histories")
+
 public class RouteHistory extends BaseEntity {
 
     @Id
