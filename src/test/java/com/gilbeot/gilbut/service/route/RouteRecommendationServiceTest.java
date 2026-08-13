@@ -19,6 +19,7 @@ import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
+import com.gilbeot.gilbut.service.history.RouteHistoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,9 @@ class RouteRecommendationServiceTest {
     @Mock
     private DrtGuideService drtGuideService;
 
+    @Mock
+    private RouteHistoryService routeHistoryService;
+
     private RouteRecommendationService routeRecommendationService;
 
     @BeforeEach
@@ -65,7 +69,8 @@ class RouteRecommendationServiceTest {
                         userMobilityProfileService,
                         aiRouteScoringRequestMapper,
                         aiRouteScoringClient,
-                        drtGuideService
+                        drtGuideService,
+                        routeHistoryService
                 );
     }
 
