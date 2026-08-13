@@ -16,6 +16,7 @@ import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
+import com.gilbeot.gilbut.service.history.RouteHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +36,7 @@ public class RouteRecommendationService {
     private final AiRouteScoringRequestMapper aiRouteScoringRequestMapper;
     private final AiRouteScoringClient aiRouteScoringClient;
     private final DrtGuideService drtGuideService;
+    private final RouteHistoryService routeHistoryService;
 
     public RouteRecommendationResult recommend(
             Long userId,
@@ -77,11 +79,20 @@ public class RouteRecommendationService {
                         scoringResponse.getDrtDecision()
                 );
 
-        return buildResult(
-                candidateResult,
-                scoringResponse,
-                drtGuide
+        RouteRecommendationResult result =
+                buildResult(
+                        candidateResult,
+                        scoringResponse,
+                        drtGuide
+                );
+
+        routeHistoryService.saveRecommendation(
+                userId,
+                request,
+                result
         );
+
+        return result;
     }
 
     private void validateResponse(

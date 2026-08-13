@@ -38,6 +38,11 @@ public enum ErrorCode implements BaseCode {
             "집 주소를 찾을 수 없습니다."
     ),
 
+    ROUTE_HISTORY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "상담 기록을 찾을 수 없습니다."
+    ),
+
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "서버 오류가 발생했습니다."
