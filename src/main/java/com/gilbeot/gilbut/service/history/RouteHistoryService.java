@@ -68,6 +68,26 @@ public class RouteHistoryService {
     }
 
     @Transactional
+    public void deleteHistory(
+            Long userId,
+            Long historyId
+    ) {
+        RouteHistory routeHistory =
+                routeHistoryRepository
+                        .findByIdAndUserId(
+                                historyId,
+                                userId
+                        )
+                        .orElseThrow(
+                                () -> new CustomException(
+                                        ErrorCode.ROUTE_HISTORY_NOT_FOUND
+                                )
+                        );
+
+        routeHistoryRepository.delete(routeHistory);
+    }
+
+    @Transactional
     public void saveRecommendation(
             Long userId,
             RouteCandidateRequest request,

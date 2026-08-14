@@ -14,6 +14,7 @@ import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteMetrics;
 import com.gilbeot.gilbut.dto.route.RouteRecommendationItem;
 import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
+import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.repository.ChatSessionRepository;
 import com.gilbeot.gilbut.repository.RouteHistoryRepository;
 import com.gilbeot.gilbut.repository.UserRepository;
@@ -29,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -206,5 +208,71 @@ class RouteHistoryServiceTest {
 
         assertThat(saved.getDrtServiceArea())
                 .isEqualTo(DrtServiceArea.GWANGGYO);
+    }
+
+    @Test
+    @DisplayName("상담 이력을 삭제한다")
+    void deleteHistory() {
+        Long userId = 1L;
+        Long historyId = 10L;
+
+        User user = User.builder()
+                .id(userId)
+                .username("tester")
+                .providerId("kakao-1")
+                .build();
+
+        RouteHistory routeHistory =
+                RouteHistory.builder()
+                        .id(historyId)
+                        .user(user)
+                        .requestId(
+                                "641ef968-a406-4152-b6c2-5fd4fc6d4d58"
+                        )
+                        .originName("현재 위치")
+                        .originLatitude(37.2636)
+                        .originLongitude(127.0286)
+                        .destinationName("○○병원")
+                        .destinationLatitude(37.2790)
+                        .destinationLongitude(127.0470)
+                        .drtRecommended(false)
+                        .build();
+
+        when(
+                routeHistoryRepository.findByIdAndUserId(
+                        historyId,
+                        userId
+                )
+        ).thenReturn(Optional.of(routeHistory));
+
+        routeHistoryService.deleteHistory(
+                userId,
+                historyId
+        );
+
+        verify(routeHistoryRepository).delete(
+                routeHistory
+        );
+    }
+
+    @Test
+    @DisplayName("본인 이력이 아니면 삭제하지 않는다")
+    void deleteHistoryNotFound() {
+        Long userId = 1L;
+        Long historyId = 10L;
+
+        when(
+                routeHistoryRepository.findByIdAndUserId(
+                        historyId,
+                        userId
+                )
+        ).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> routeHistoryService.deleteHistory(
+                        userId,
+                        historyId
+                )
+        ).isInstanceOf(CustomException.class);
     }
 }
