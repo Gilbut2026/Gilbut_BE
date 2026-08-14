@@ -8,6 +8,7 @@ import com.gilbeot.gilbut.service.history.RouteHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -57,6 +58,25 @@ public class RouteHistoryController {
         return ApiResponse.success(
                 SuccessCode._OK,
                 response
+        );
+    }
+
+    @DeleteMapping("/{historyId}")
+    public ResponseEntity<ApiResponse<Void>>
+    deleteHistory(
+            Authentication authentication,
+            @PathVariable Long historyId
+    ) {
+        Long userId = extractUserId(authentication);
+
+        routeHistoryService.deleteHistory(
+                userId,
+                historyId
+        );
+
+        return ApiResponse.success(
+                SuccessCode._OK,
+                null
         );
     }
 
