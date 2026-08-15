@@ -15,8 +15,8 @@ import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
-import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import com.gilbeot.gilbut.service.history.RouteHistoryService;
+import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +36,7 @@ public class RouteRecommendationService {
     private final AiRouteScoringRequestMapper aiRouteScoringRequestMapper;
     private final AiRouteScoringClient aiRouteScoringClient;
     private final DrtGuideService drtGuideService;
+    private final RouteRecommendationReasonService routeRecommendationReasonService;
     private final RouteHistoryService routeHistoryService;
 
     public RouteRecommendationResult recommend(
@@ -135,7 +136,6 @@ public class RouteRecommendationService {
 
         for (AiRouteScoringResponse.Result result
                 : scoringResponse.getResults()) {
-
             if (result == null
                     || result.getRouteId() == null
                     || result.getStatus() == null
@@ -197,7 +197,7 @@ public class RouteRecommendationService {
             );
         }
 
-        List<RouteRecommendationItem> recommendations =
+        List<AiRouteScoringResponse.Result> scoredResults =
                 scoringResponse.getResults()
                         .stream()
                         .filter(result ->
@@ -210,6 +210,45 @@ public class RouteRecommendationService {
                                         second.getRank()
                                 )
                         )
+                        .toList();
+
+        AiRouteScoringResponse.Result topResult =
+                scoredResults.isEmpty()
+                        ? null
+                        : scoredResults.get(0);
+
+        AiRouteScoringResponse.Result secondResult =
+                scoredResults.size() < 2
+                        ? null
+                        : scoredResults.get(1);
+
+        RouteCandidate topCandidate =
+                topResult == null
+                        ? null
+                        : candidateMap.get(
+                        topResult.getRouteId()
+                );
+
+        RouteCandidate secondCandidate =
+                secondResult == null
+                        ? null
+                        : candidateMap.get(
+                        secondResult.getRouteId()
+                );
+
+        String recommendationReason =
+                topResult == null
+                        ? null
+                        : routeRecommendationReasonService
+                        .createReason(
+                                topCandidate,
+                                topResult,
+                                secondCandidate,
+                                secondResult
+                        );
+
+        List<RouteRecommendationItem> recommendations =
+                scoredResults.stream()
                         .map(result ->
                                 RouteRecommendationItem.builder()
                                         .routeId(
@@ -225,6 +264,11 @@ public class RouteRecommendationService {
                                         )
                                         .rank(
                                                 result.getRank()
+                                        )
+                                        .recommendationReason(
+                                                result.getRank() == 1
+                                                        ? recommendationReason
+                                                        : null
                                         )
                                         .scoreBreakdown(
                                                 result.getScoreBreakdown()

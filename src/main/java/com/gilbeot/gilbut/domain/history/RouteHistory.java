@@ -5,7 +5,17 @@ import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.domain.user.User;
 import com.gilbeot.gilbut.dto.drt.DrtServiceArea;
 import com.gilbeot.gilbut.global.entity.BaseEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +30,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "route_histories")
-
 public class RouteHistory extends BaseEntity {
 
     @Id
@@ -63,6 +72,9 @@ public class RouteHistory extends BaseEntity {
 
     @Column(name = "recommended_route_id", length = 100)
     private String recommendedRouteId;
+
+    @Column(name = "recommendation_reason", length = 500)
+    private String recommendationReason;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "recommended_route_type", length = 20)

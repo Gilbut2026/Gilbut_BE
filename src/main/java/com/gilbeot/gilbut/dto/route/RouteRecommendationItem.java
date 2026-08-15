@@ -12,6 +12,7 @@ public class RouteRecommendationItem {
     private RouteCandidate candidate;
     private Double score;
     private Integer rank;
+    private String recommendationReason;
     private AiRouteScoringResponse.ScoreBreakdown scoreBreakdown;
     private AiRouteScoringResponse.SlopeSummary slopeSummary;
 }

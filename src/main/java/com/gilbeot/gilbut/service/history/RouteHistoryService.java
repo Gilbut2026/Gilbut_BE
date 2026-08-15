@@ -110,12 +110,13 @@ public class RouteHistoryService {
             return;
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(
-                        () -> new CustomException(
-                                ErrorCode.USER_NOT_FOUND
-                        )
-                );
+        User user =
+                userRepository.findById(userId)
+                        .orElseThrow(
+                                () -> new CustomException(
+                                        ErrorCode.USER_NOT_FOUND
+                                )
+                        );
 
         ChatSession session =
                 findMatchingSession(
@@ -136,7 +137,9 @@ public class RouteHistoryService {
         RouteHistory routeHistory =
                 RouteHistory.builder()
                         .user(user)
-                        .requestId(result.getRequestId())
+                        .requestId(
+                                result.getRequestId()
+                        )
                         .originName(
                                 resolveOriginName(session)
                         )
@@ -173,6 +176,11 @@ public class RouteHistoryService {
                                         ? null
                                         : topRecommendation.getRouteId()
                         )
+                        .recommendationReason(
+                                topRecommendation == null
+                                        ? null
+                                        : topRecommendation.getRecommendationReason()
+                        )
                         .recommendedRouteType(
                                 candidate == null
                                         ? null
@@ -203,7 +211,9 @@ public class RouteHistoryService {
                                         ? null
                                         : metrics.getTransferCount()
                         )
-                        .drtRecommended(drtRecommended)
+                        .drtRecommended(
+                                drtRecommended
+                        )
                         .drtServiceArea(
                                 drtRecommended
                                         ? drtGuide.getServiceArea()
@@ -211,7 +221,9 @@ public class RouteHistoryService {
                         )
                         .build();
 
-        routeHistoryRepository.save(routeHistory);
+        routeHistoryRepository.save(
+                routeHistory
+        );
     }
 
     private ChatSession findMatchingSession(
@@ -262,7 +274,8 @@ public class RouteHistoryService {
             return null;
         }
 
-        return result.getRecommendations().get(0);
+        return result.getRecommendations()
+                .get(0);
     }
 
     private String resolveOriginName(
@@ -272,7 +285,8 @@ public class RouteHistoryService {
                 && StringUtils.hasText(
                 session.getOriginName()
         )) {
-            return session.getOriginName().trim();
+            return session.getOriginName()
+                    .trim();
         }
 
         return DEFAULT_ORIGIN_NAME;
@@ -285,7 +299,8 @@ public class RouteHistoryService {
                 && StringUtils.hasText(
                 session.getDestinationName()
         )) {
-            return session.getDestinationName().trim();
+            return session.getDestinationName()
+                    .trim();
         }
 
         return DEFAULT_DESTINATION_NAME;
