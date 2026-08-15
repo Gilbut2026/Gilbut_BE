@@ -249,4 +249,68 @@ class ChatSessionTest {
         assertThat(session.getSelectedRouteId())
                 .isNull();
     }
+    @Test
+    @DisplayName("경로 계산을 완료하면 요청 ID를 저장하고 결과 표시 상태로 이동한다")
+    void completeRouteCalculation() {
+
+        User user = User.builder()
+                .id(1L)
+                .username("test-user")
+                .providerId("kakao-test")
+                .build();
+
+        ChatSession session =
+                ChatSession.create(user);
+
+        session.confirmDestination(
+                "12345",
+                "아주대학교병원",
+                "경기도 수원시 영통구 월드컵로 164",
+                37.279,
+                127.047
+        );
+
+        session.confirmOrigin(
+                OriginType.CURRENT_LOCATION,
+                null,
+                "현재 위치",
+                null,
+                37.2636,
+                127.0286
+        );
+
+        session.moveToDepartureTimeConfirmation();
+
+        session.confirmDepartureTime(
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        15,
+                        14,
+                        0
+                )
+        );
+
+        assertThat(session.getCurrentState())
+                .isEqualTo(
+                        ChatState.ROUTE_CALCULATING
+                );
+
+        assertThat(session.getActiveRequestId())
+                .isNull();
+
+        session.completeRouteCalculation(
+                "request-123"
+        );
+
+        assertThat(session.getCurrentState())
+                .isEqualTo(
+                        ChatState.RESULT_PRESENTATION
+                );
+
+        assertThat(session.getActiveRequestId())
+                .isEqualTo(
+                        "request-123"
+                );
+    }
 }

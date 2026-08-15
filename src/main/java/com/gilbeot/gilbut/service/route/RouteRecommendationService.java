@@ -15,6 +15,7 @@ import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
+import com.gilbeot.gilbut.service.chat.ChatSessionService;
 import com.gilbeot.gilbut.service.history.RouteHistoryService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class RouteRecommendationService {
     private final RouteAccessibilitySummaryMapper routeAccessibilitySummaryMapper;
     private final RouteRecommendationReasonService routeRecommendationReasonService;
     private final RouteHistoryService routeHistoryService;
+    private final ChatSessionService chatSessionService;
 
     public RouteRecommendationResult recommend(
             Long userId,
@@ -92,6 +94,11 @@ public class RouteRecommendationService {
                 userId,
                 request,
                 result
+        );
+
+        chatSessionService.completeRouteCalculationIfActive(
+                userId,
+                result.getRequestId()
         );
 
         return result;

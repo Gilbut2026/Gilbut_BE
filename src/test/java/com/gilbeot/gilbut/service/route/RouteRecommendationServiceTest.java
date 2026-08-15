@@ -20,6 +20,7 @@ import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.history.RouteHistoryService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
+import com.gilbeot.gilbut.service.chat.ChatSessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,8 @@ class RouteRecommendationServiceTest {
     @Mock
     private RouteAccessibilitySummaryMapper routeAccessibilitySummaryMapper;
 
+    @Mock
+    private ChatSessionService chatSessionService;
     private RouteRecommendationService routeRecommendationService;
 
     @BeforeEach
@@ -78,7 +81,8 @@ class RouteRecommendationServiceTest {
                         drtGuideService,
                         routeAccessibilitySummaryMapper,
                         routeRecommendationReasonService,
-                        routeHistoryService
+                        routeHistoryService,
+                        chatSessionService
                 );
     }
 
@@ -318,6 +322,12 @@ class RouteRecommendationServiceTest {
                 userId,
                 request,
                 result
+        );
+        verify(
+                chatSessionService
+        ).completeRouteCalculationIfActive(
+                userId,
+                "request-1"
         );
     }
 

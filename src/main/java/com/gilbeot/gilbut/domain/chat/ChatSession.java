@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -141,7 +142,6 @@ public class ChatSession extends BaseEntity {
     @Column(name = "departure_datetime")
     private LocalDateTime departureDateTime;
 
-
     public static ChatSession create(User user) {
         return ChatSession.builder()
                 .user(user)
@@ -199,7 +199,8 @@ public class ChatSession extends BaseEntity {
         this.currentState = ChatState.ROUTE_CALCULATING;
     }
 
-    public void completeRouteCalculation() {
+    public void completeRouteCalculation(String requestId) {
+        this.activeRequestId = requestId;
         this.currentState = ChatState.RESULT_PRESENTATION;
     }
 

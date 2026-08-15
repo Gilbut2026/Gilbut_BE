@@ -11,6 +11,7 @@ public class DrtGuideResponse {
     private String serviceName;
     private DrtServiceArea serviceArea;
     private String serviceAreaName;
+    private String contactNumber;
     private DrtAvailability availability;
     private String message;
 }
