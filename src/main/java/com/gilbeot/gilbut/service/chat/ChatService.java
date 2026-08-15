@@ -6,10 +6,10 @@ import com.gilbeot.gilbut.client.ai.dto.AiChatAnalyzeResponse;
 import com.gilbeot.gilbut.domain.chat.ChatIntent;
 import com.gilbeot.gilbut.domain.chat.ChatResponseType;
 import com.gilbeot.gilbut.domain.chat.ChatState;
-import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
-import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.ChatMessageRequest;
 import com.gilbeot.gilbut.dto.chat.request.DepartureTimeConfirmationRequest;
+import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
+import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatMessageResponse;
 import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
 import com.gilbeot.gilbut.dto.place.request.PlaceSearchRequest;
@@ -95,45 +95,33 @@ public class ChatService {
         );
     }
 
+    public ChatSessionResponse confirmDepartureTime(
+            Long userId,
+            DepartureTimeConfirmationRequest request
+    ) {
+        return chatSessionService
+                .confirmDepartureTime(
+                        userId,
+                        request
+                );
+    }
+
     private ChatMessageResponse handleSearchDestination(
             ChatSessionResponse session,
             AiChatAnalyzeResponse aiResponse
     ) {
-        if (session.getCurrentState()
-                != ChatState.DESTINATION_WAITING) {
-
-            throw new CustomException(
-                    ErrorCode.CHAT_STATE_CONFLICT
-            );
-        }
-
-        if (aiResponse.getIntent()
-                != ChatIntent.DESTINATION) {
-
-            throw new CustomException(
-                    ErrorCode.AI_CHAT_RESPONSE_INVALID
-            );
-        }
+        validateDestinationSearch(
+                session,
+                aiResponse
+        );
 
         String keyword =
-                aiResponse.getValue();
-
-        if (!StringUtils.hasText(keyword)) {
-            throw new CustomException(
-                    ErrorCode.AI_CHAT_RESPONSE_INVALID
-            );
-        }
+                aiResponse.getValue().trim();
 
         PlaceSearchRequest placeRequest =
-                new PlaceSearchRequest();
-
-        placeRequest.setKeyword(
-                keyword.trim()
-        );
-
-        placeRequest.setSize(
-                PLACE_SEARCH_SIZE
-        );
+                createPlaceSearchRequest(
+                        keyword
+                );
 
         PlaceSearchResponse searchResponse =
                 placeSearchService.search(
@@ -168,59 +156,153 @@ public class ChatService {
             ChatMessageRequest request,
             AiChatAnalyzeResponse aiResponse
     ) {
-        if (session.getCurrentState()
-                != ChatState.DESTINATION_WAITING) {
+        validateNearbySearch(
+                session,
+                aiResponse
+        );
 
-            throw new CustomException(
-                    ErrorCode.CHAT_STATE_CONFLICT
+        String keyword =
+                aiResponse.getValue().trim();
+
+        if (StringUtils.hasText(
+                aiResponse.getReferencePlace()
+        )) {
+            return handleReferencePlaceNearbySearch(
+                    session,
+                    keyword,
+                    aiResponse.getReferencePlace().trim()
             );
         }
 
-        if (aiResponse.getIntent()
-                != ChatIntent.FACILITY) {
+        return handleCurrentLocationNearbySearch(
+                session,
+                request,
+                keyword
+        );
+    }
 
-            throw new CustomException(
-                    ErrorCode.AI_CHAT_RESPONSE_INVALID
-            );
-        }
+    private ChatMessageResponse handleReferencePlaceNearbySearch(
+            ChatSessionResponse session,
+            String keyword,
+            String referencePlace
+    ) {
+        PlaceItemResponse reference =
+                findReferencePlace(
+                        referencePlace
+                );
 
-        String keyword = aiResponse.getValue();
-
-        if (!StringUtils.hasText(keyword)) {
-            throw new CustomException(
-                    ErrorCode.AI_CHAT_RESPONSE_INVALID
-            );
-        }
-
-        Double latitude = request.getLatitude();
-        Double longitude = request.getLongitude();
-
-        if (latitude == null && longitude == null) {
+        if (reference == null) {
             return ChatMessageResponse.builder()
-                    .sessionId(session.getSessionId())
-                    .currentState(session.getCurrentState())
-                    .responseType(ChatResponseType.LOCATION_REQUIRED)
-                    .message("근처 장소를 찾으려면 현재 위치가 필요해요. 위치 사용을 켜 주세요.")
+                    .sessionId(
+                            session.getSessionId()
+                    )
+                    .currentState(
+                            session.getCurrentState()
+                    )
+                    .responseType(
+                            ChatResponseType.TEXT
+                    )
+                    .message(
+                            referencePlace
+                                    + " 위치를 찾지 못했어요. "
+                                    + "기준 장소를 조금 더 구체적으로 말씀해 주세요."
+                    )
                     .build();
         }
 
-        if (latitude == null || longitude == null) {
+        PlaceSearchRequest placeRequest =
+                createNearbyPlaceSearchRequest(
+                        keyword,
+                        reference.getLatitude(),
+                        reference.getLongitude()
+                );
+
+        PlaceSearchResponse searchResponse =
+                placeSearchService.search(
+                        placeRequest
+                );
+
+        List<PlaceItemResponse> places =
+                searchResponse.getPlaces();
+
+        String resolvedReferenceName =
+                StringUtils.hasText(
+                        reference.getName()
+                )
+                        ? reference.getName()
+                        : referencePlace;
+
+        String message =
+                places == null || places.isEmpty()
+                        ? resolvedReferenceName
+                        + " 근처에서 검색 결과를 찾지 못했어요. 다른 검색어로 말씀해 주세요."
+                        : resolvedReferenceName
+                        + " 근처에서 찾았어요. 가실 곳을 선택해 주세요.";
+
+        return ChatMessageResponse.builder()
+                .sessionId(
+                        session.getSessionId()
+                )
+                .currentState(
+                        session.getCurrentState()
+                )
+                .responseType(
+                        ChatResponseType.PLACE_CANDIDATES
+                )
+                .message(message)
+                .places(places)
+                .build();
+    }
+
+    private ChatMessageResponse handleCurrentLocationNearbySearch(
+            ChatSessionResponse session,
+            ChatMessageRequest request,
+            String keyword
+    ) {
+        Double latitude =
+                request.getLatitude();
+
+        Double longitude =
+                request.getLongitude();
+
+        if (latitude == null
+                && longitude == null) {
+
+            return ChatMessageResponse.builder()
+                    .sessionId(
+                            session.getSessionId()
+                    )
+                    .currentState(
+                            session.getCurrentState()
+                    )
+                    .responseType(
+                            ChatResponseType.LOCATION_REQUIRED
+                    )
+                    .message(
+                            "근처 장소를 찾으려면 현재 위치가 필요해요. 위치 사용을 켜 주세요."
+                    )
+                    .build();
+        }
+
+        if (latitude == null
+                || longitude == null) {
+
             throw new CustomException(
                     ErrorCode.INVALID_REQUEST
             );
         }
 
         PlaceSearchRequest placeRequest =
-                new PlaceSearchRequest();
-
-        placeRequest.setKeyword(keyword.trim());
-        placeRequest.setLat(String.valueOf(latitude));
-        placeRequest.setLon(String.valueOf(longitude));
-        placeRequest.setRadiusKm(NEARBY_SEARCH_RADIUS_KM);
-        placeRequest.setSize(PLACE_SEARCH_SIZE);
+                createNearbyPlaceSearchRequest(
+                        keyword,
+                        latitude,
+                        longitude
+                );
 
         PlaceSearchResponse searchResponse =
-                placeSearchService.search(placeRequest);
+                placeSearchService.search(
+                        placeRequest
+                );
 
         List<PlaceItemResponse> places =
                 searchResponse.getPlaces();
@@ -231,13 +313,144 @@ public class ChatService {
                         : "현재 위치 근처에서 찾았어요. 가실 곳을 선택해 주세요.";
 
         return ChatMessageResponse.builder()
-                .sessionId(session.getSessionId())
-                .currentState(session.getCurrentState())
-                .responseType(ChatResponseType.PLACE_CANDIDATES)
+                .sessionId(
+                        session.getSessionId()
+                )
+                .currentState(
+                        session.getCurrentState()
+                )
+                .responseType(
+                        ChatResponseType.PLACE_CANDIDATES
+                )
                 .message(message)
                 .places(places)
                 .build();
     }
+
+    private PlaceItemResponse findReferencePlace(
+            String referencePlace
+    ) {
+        PlaceSearchRequest referenceRequest =
+                createPlaceSearchRequest(
+                        referencePlace
+                );
+
+        PlaceSearchResponse response =
+                placeSearchService.search(
+                        referenceRequest
+                );
+
+        if (response == null
+                || response.getPlaces() == null
+                || response.getPlaces().isEmpty()) {
+
+            return null;
+        }
+
+        return response.getPlaces()
+                .stream()
+                .filter(this::hasValidCoordinates)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private PlaceSearchRequest createPlaceSearchRequest(
+            String keyword
+    ) {
+        PlaceSearchRequest request =
+                new PlaceSearchRequest();
+
+        request.setKeyword(keyword);
+        request.setSize(
+                PLACE_SEARCH_SIZE
+        );
+
+        return request;
+    }
+
+    private PlaceSearchRequest createNearbyPlaceSearchRequest(
+            String keyword,
+            Double latitude,
+            Double longitude
+    ) {
+        PlaceSearchRequest request =
+                createPlaceSearchRequest(
+                        keyword
+                );
+
+        request.setLat(
+                String.valueOf(latitude)
+        );
+
+        request.setLon(
+                String.valueOf(longitude)
+        );
+
+        request.setRadiusKm(
+                NEARBY_SEARCH_RADIUS_KM
+        );
+
+        return request;
+    }
+
+    private boolean hasValidCoordinates(
+            PlaceItemResponse place
+    ) {
+        return place != null
+                && place.getLatitude() != null
+                && place.getLongitude() != null;
+    }
+
+    private void validateDestinationSearch(
+            ChatSessionResponse session,
+            AiChatAnalyzeResponse aiResponse
+    ) {
+        validateDestinationWaitingState(
+                session
+        );
+
+        if (aiResponse.getIntent()
+                != ChatIntent.DESTINATION
+                || !StringUtils.hasText(
+                aiResponse.getValue()
+        )) {
+            throw new CustomException(
+                    ErrorCode.AI_CHAT_RESPONSE_INVALID
+            );
+        }
+    }
+
+    private void validateNearbySearch(
+            ChatSessionResponse session,
+            AiChatAnalyzeResponse aiResponse
+    ) {
+        validateDestinationWaitingState(
+                session
+        );
+
+        if (aiResponse.getIntent()
+                != ChatIntent.FACILITY
+                || !StringUtils.hasText(
+                aiResponse.getValue()
+        )) {
+            throw new CustomException(
+                    ErrorCode.AI_CHAT_RESPONSE_INVALID
+            );
+        }
+    }
+
+    private void validateDestinationWaitingState(
+            ChatSessionResponse session
+    ) {
+        if (session.getCurrentState()
+                != ChatState.DESTINATION_WAITING) {
+
+            throw new CustomException(
+                    ErrorCode.CHAT_STATE_CONFLICT
+            );
+        }
+    }
+
     private ChatMessageResponse handleOutOfScope(
             ChatSessionResponse session
     ) {
@@ -268,16 +481,5 @@ public class ChatService {
                     ErrorCode.AI_CHAT_RESPONSE_INVALID
             );
         }
-    }
-
-    public ChatSessionResponse confirmDepartureTime(
-            Long userId,
-            DepartureTimeConfirmationRequest request
-    ) {
-        return chatSessionService
-                .confirmDepartureTime(
-                        userId,
-                        request
-                );
     }
 }
