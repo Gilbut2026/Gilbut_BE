@@ -203,7 +203,9 @@ public class RouteAccessibilityEnrichmentService {
                 extractCoordinates(segment);
 
         if (coordinates == null) {
-            return segment;
+            return withUnknownAccessibilitySignals(
+                    segment
+            );
         }
 
         CompletableFuture<RouteAccessibilitySignals>
@@ -211,7 +213,9 @@ public class RouteAccessibilityEnrichmentService {
                 signalFutures.get(coordinates);
 
         if (signalFuture == null) {
-            return segment;
+            return withUnknownAccessibilitySignals(
+                    segment
+            );
         }
 
         RouteAccessibilitySignals signals =
@@ -219,6 +223,16 @@ public class RouteAccessibilityEnrichmentService {
 
         return segment.toBuilder()
                 .accessibilitySignals(signals)
+                .build();
+    }
+
+    private RouteWalkSegment withUnknownAccessibilitySignals(
+            RouteWalkSegment segment
+    ) {
+        return segment.toBuilder()
+                .accessibilitySignals(
+                        RouteAccessibilitySignals.unknown()
+                )
                 .build();
     }
 

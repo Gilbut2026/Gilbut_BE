@@ -288,6 +288,78 @@ class RouteAccessibilityEnrichmentServiceTest {
 
     @Test
     @DisplayName(
+            "외부 도보 구간의 좌표를 확인할 수 없으면 접근성 정보를 UNKNOWN으로 처리한다"
+    )
+    void marksUnknownWhenExternalWalkCoordinatesAreMissing() {
+        RouteWalkSegment segment =
+                RouteWalkSegment.builder()
+                        .walkSegmentId(
+                                "transit-1:walk:0"
+                        )
+                        .role(
+                                RouteWalkSegment.Role
+                                        .ORIGIN_TO_FIRST_STOP
+                        )
+                        .segmentScope(
+                                SegmentScope.EXTERNAL_WALK
+                        )
+                        .distanceM(100)
+                        .durationSec(90)
+                        .geometry(null)
+                        .build();
+
+        RouteCandidateResult result =
+                routeAccessibilityEnrichmentService
+                        .enrich(
+                                candidateResult(
+                                        List.of(segment)
+                                )
+                        );
+
+        RouteAccessibilitySignals signals =
+                result.getCandidates()
+                        .get(0)
+                        .getWalkSegments()
+                        .get(0)
+                        .getAccessibilitySignals();
+
+        assertThat(signals)
+                .isNotNull();
+
+        assertThat(
+                signals.getStair()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.UNKNOWN
+        );
+
+        assertThat(
+                signals.getStair()
+                        .getCount()
+        ).isNull();
+
+        assertThat(
+                signals.getOverpass()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.UNKNOWN
+        );
+
+        assertThat(
+                signals.getUnderpass()
+                        .getState()
+        ).isEqualTo(
+                RouteAccessibilitySignals.State.UNKNOWN
+        );
+
+        verifyNoInteractions(
+                tmapWalkingRouteClient,
+                walkingAccessibilitySignalExtractor
+        );
+    }
+
+    @Test
+    @DisplayName(
             "대중교통 환승 도보 구간은 보행자 API로 재조회하지 않는다"
     )
     void skipsTransferWalkSegment() {
