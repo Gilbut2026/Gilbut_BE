@@ -18,8 +18,8 @@ import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
-import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import com.gilbeot.gilbut.service.history.RouteHistoryService;
+import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,6 +56,9 @@ class RouteRecommendationServiceTest {
     private DrtGuideService drtGuideService;
 
     @Mock
+    private RouteRecommendationReasonService routeRecommendationReasonService;
+
+    @Mock
     private RouteHistoryService routeHistoryService;
 
     private RouteRecommendationService routeRecommendationService;
@@ -70,12 +73,13 @@ class RouteRecommendationServiceTest {
                         aiRouteScoringRequestMapper,
                         aiRouteScoringClient,
                         drtGuideService,
+                        routeRecommendationReasonService,
                         routeHistoryService
                 );
     }
 
     @Test
-    @DisplayName("AI 스코어링 결과와 똑버스 안내를 경로 추천 결과로 반환한다")
+    @DisplayName("AI 스코어링 결과와 추천 이유 및 똑버스 안내를 경로 추천 결과로 반환한다")
     void recommend() {
         Long userId = 1L;
 
@@ -173,6 +177,10 @@ class RouteRecommendationServiceTest {
                         )
                         .build();
 
+        String recommendationReason =
+                "저장된 이동 설정과 경로 조건을 종합했을 때 "
+                        + "가장 이동하기 편한 경로로 판단했어요.";
+
         when(
                 routeCandidateAggregationService
                         .createCandidates(request)
@@ -207,6 +215,18 @@ class RouteRecommendationServiceTest {
                         drtDecision
                 )
         ).thenReturn(drtGuide);
+
+        when(
+                routeRecommendationReasonService
+                        .createReason(
+                                candidate,
+                                scoringResult,
+                                null,
+                                null
+                        )
+        ).thenReturn(
+                recommendationReason
+        );
 
         RouteRecommendationResult result =
                 routeRecommendationService.recommend(
@@ -244,6 +264,14 @@ class RouteRecommendationServiceTest {
                         .getCandidate()
         ).isSameAs(candidate);
 
+        assertThat(
+                result.getRecommendations()
+                        .get(0)
+                        .getRecommendationReason()
+        ).isEqualTo(
+                recommendationReason
+        );
+
         assertThat(result.getDrtDecision())
                 .isSameAs(drtDecision);
 
@@ -265,10 +293,250 @@ class RouteRecommendationServiceTest {
         );
 
         verify(
+                routeRecommendationReasonService
+        ).createReason(
+                candidate,
+                scoringResult,
+                null,
+                null
+        );
+
+        verify(
                 drtGuideService
         ).createGuide(
                 request,
                 drtDecision
+        );
+
+        verify(
+                routeHistoryService
+        ).saveRecommendation(
+                userId,
+                request,
+                result
+        );
+    }
+
+    @Test
+    @DisplayName("AI 순위에 따라 경로를 정렬하고 1순위 경로에만 추천 이유를 포함한다")
+    void recommendWithRankedRoutes() {
+        Long userId = 1L;
+
+        RouteCandidateRequest request =
+                RouteCandidateRequest.builder()
+                        .originLatitude(37.2636)
+                        .originLongitude(127.0286)
+                        .destinationLatitude(37.2750)
+                        .destinationLongitude(127.0300)
+                        .build();
+
+        RouteCandidate firstCandidate =
+                RouteCandidate.builder()
+                        .routeId("route-1")
+                        .routeType(RouteType.WALKING)
+                        .routeOption(
+                                WalkingRouteOption.DEFAULT
+                        )
+                        .providerRank(2)
+                        .metrics(
+                                RouteMetrics.builder()
+                                        .totalTimeSec(900)
+                                        .totalWalkTimeSec(600)
+                                        .totalWalkDistanceM(800)
+                                        .transferCount(0)
+                                        .build()
+                        )
+                        .build();
+
+        RouteCandidate secondCandidate =
+                RouteCandidate.builder()
+                        .routeId("route-2")
+                        .routeType(RouteType.WALKING)
+                        .routeOption(
+                                WalkingRouteOption.DEFAULT
+                        )
+                        .providerRank(1)
+                        .metrics(
+                                RouteMetrics.builder()
+                                        .totalTimeSec(800)
+                                        .totalWalkTimeSec(500)
+                                        .totalWalkDistanceM(700)
+                                        .transferCount(0)
+                                        .build()
+                        )
+                        .build();
+
+        RouteCandidateResult candidateResult =
+                RouteCandidateResult.builder()
+                        .requestId("request-1")
+                        .candidates(
+                                List.of(
+                                        firstCandidate,
+                                        secondCandidate
+                                )
+                        )
+                        .build();
+
+        MobilityProfileResponse mobilityProfile =
+                MobilityProfileResponse.builder()
+                        .build();
+
+        AiRouteScoringRequest scoringRequest =
+                AiRouteScoringRequest.builder()
+                        .requestId("request-1")
+                        .candidates(List.of())
+                        .build();
+
+        AiRouteScoringResponse.Result rankTwoResult =
+                AiRouteScoringResponse.Result.builder()
+                        .routeId("route-2")
+                        .status(
+                                ScoringResultStatus.SCORED
+                        )
+                        .score(80.0)
+                        .rank(2)
+                        .filterCodes(List.of())
+                        .build();
+
+        AiRouteScoringResponse.Result rankOneResult =
+                AiRouteScoringResponse.Result.builder()
+                        .routeId("route-1")
+                        .status(
+                                ScoringResultStatus.SCORED
+                        )
+                        .score(92.0)
+                        .rank(1)
+                        .filterCodes(List.of())
+                        .build();
+
+        AiRouteScoringResponse scoringResponse =
+                AiRouteScoringResponse.builder()
+                        .requestId("request-1")
+                        .scoringVersion(
+                                "accessibility-score-v1"
+                        )
+                        .results(
+                                List.of(
+                                        rankTwoResult,
+                                        rankOneResult
+                                )
+                        )
+                        .build();
+
+        String recommendationReason =
+                "걷는 시간이 비교적 짧고 환승도 적어 "
+                        + "이 경로를 추천했어요.";
+
+        when(
+                routeCandidateAggregationService
+                        .createCandidates(request)
+        ).thenReturn(candidateResult);
+
+        when(
+                routeAccessibilityEnrichmentService
+                        .enrich(candidateResult)
+        ).thenReturn(candidateResult);
+
+        when(
+                userMobilityProfileService
+                        .getMobilityProfile(userId)
+        ).thenReturn(mobilityProfile);
+
+        when(
+                aiRouteScoringRequestMapper.toRequest(
+                        mobilityProfile,
+                        candidateResult
+                )
+        ).thenReturn(scoringRequest);
+
+        when(
+                aiRouteScoringClient.score(
+                        scoringRequest
+                )
+        ).thenReturn(scoringResponse);
+
+        when(
+                drtGuideService.createGuide(
+                        request,
+                        null
+                )
+        ).thenReturn(null);
+
+        when(
+                routeRecommendationReasonService
+                        .createReason(
+                                firstCandidate,
+                                rankOneResult,
+                                secondCandidate,
+                                rankTwoResult
+                        )
+        ).thenReturn(
+                recommendationReason
+        );
+
+        RouteRecommendationResult result =
+                routeRecommendationService.recommend(
+                        userId,
+                        request
+                );
+
+        assertThat(
+                result.getRecommendations()
+        ).hasSize(2);
+
+        assertThat(
+                result.getRecommendations()
+                        .get(0)
+                        .getRouteId()
+        ).isEqualTo("route-1");
+
+        assertThat(
+                result.getRecommendations()
+                        .get(0)
+                        .getRank()
+        ).isEqualTo(1);
+
+        assertThat(
+                result.getRecommendations()
+                        .get(0)
+                        .getRecommendationReason()
+        ).isEqualTo(
+                recommendationReason
+        );
+
+        assertThat(
+                result.getRecommendations()
+                        .get(1)
+                        .getRouteId()
+        ).isEqualTo("route-2");
+
+        assertThat(
+                result.getRecommendations()
+                        .get(1)
+                        .getRank()
+        ).isEqualTo(2);
+
+        assertThat(
+                result.getRecommendations()
+                        .get(1)
+                        .getRecommendationReason()
+        ).isNull();
+
+        verify(
+                routeRecommendationReasonService
+        ).createReason(
+                firstCandidate,
+                rankOneResult,
+                secondCandidate,
+                rankTwoResult
+        );
+
+        verify(
+                routeHistoryService
+        ).saveRecommendation(
+                userId,
+                request,
+                result
         );
     }
 
@@ -336,6 +604,8 @@ class RouteRecommendationServiceTest {
                         userId,
                         request
                 )
-        ).isInstanceOf(CustomException.class);
+        ).isInstanceOf(
+                CustomException.class
+        );
     }
 }

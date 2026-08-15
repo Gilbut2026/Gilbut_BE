@@ -19,6 +19,7 @@ public class RouteHistoryDetailResponse {
     private PlaceResponse destination;
     private LocalDateTime departureDateTime;
     private String recommendedRouteId;
+    private String recommendationReason;
     private RouteType recommendedRouteType;
     private WalkingRouteOption recommendedRouteOption;
     private Integer totalTimeSec;
@@ -33,22 +34,42 @@ public class RouteHistoryDetailResponse {
             RouteHistory routeHistory
     ) {
         return RouteHistoryDetailResponse.builder()
-                .historyId(routeHistory.getId())
-                .requestId(routeHistory.getRequestId())
+                .historyId(
+                        routeHistory.getId()
+                )
+                .requestId(
+                        routeHistory.getRequestId()
+                )
                 .origin(
                         PlaceResponse.builder()
-                                .name(routeHistory.getOriginName())
-                                .address(routeHistory.getOriginAddress())
-                                .latitude(routeHistory.getOriginLatitude())
-                                .longitude(routeHistory.getOriginLongitude())
+                                .name(
+                                        routeHistory.getOriginName()
+                                )
+                                .address(
+                                        routeHistory.getOriginAddress()
+                                )
+                                .latitude(
+                                        routeHistory.getOriginLatitude()
+                                )
+                                .longitude(
+                                        routeHistory.getOriginLongitude()
+                                )
                                 .build()
                 )
                 .destination(
                         PlaceResponse.builder()
-                                .name(routeHistory.getDestinationName())
-                                .address(routeHistory.getDestinationAddress())
-                                .latitude(routeHistory.getDestinationLatitude())
-                                .longitude(routeHistory.getDestinationLongitude())
+                                .name(
+                                        routeHistory.getDestinationName()
+                                )
+                                .address(
+                                        routeHistory.getDestinationAddress()
+                                )
+                                .latitude(
+                                        routeHistory.getDestinationLatitude()
+                                )
+                                .longitude(
+                                        routeHistory.getDestinationLongitude()
+                                )
                                 .build()
                 )
                 .departureDateTime(
@@ -57,23 +78,36 @@ public class RouteHistoryDetailResponse {
                 .recommendedRouteId(
                         routeHistory.getRecommendedRouteId()
                 )
+                .recommendationReason(
+                        routeHistory.getRecommendationReason()
+                )
                 .recommendedRouteType(
                         routeHistory.getRecommendedRouteType()
                 )
                 .recommendedRouteOption(
                         routeHistory.getRecommendedRouteOption()
                 )
-                .totalTimeSec(routeHistory.getTotalTimeSec())
+                .totalTimeSec(
+                        routeHistory.getTotalTimeSec()
+                )
                 .totalWalkTimeSec(
                         routeHistory.getTotalWalkTimeSec()
                 )
                 .totalWalkDistanceM(
                         routeHistory.getTotalWalkDistanceM()
                 )
-                .transferCount(routeHistory.getTransferCount())
-                .drtRecommended(routeHistory.isDrtRecommended())
-                .drtServiceArea(routeHistory.getDrtServiceArea())
-                .createdAt(routeHistory.getCreatedAt())
+                .transferCount(
+                        routeHistory.getTransferCount()
+                )
+                .drtRecommended(
+                        routeHistory.isDrtRecommended()
+                )
+                .drtServiceArea(
+                        routeHistory.getDrtServiceArea()
+                )
+                .createdAt(
+                        routeHistory.getCreatedAt()
+                )
                 .build();
     }
 
