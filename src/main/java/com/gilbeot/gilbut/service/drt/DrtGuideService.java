@@ -112,6 +112,9 @@ public class DrtGuideService {
                 .serviceAreaName(
                         serviceArea.getDisplayName()
                 )
+                .contactNumber(
+                        serviceArea.getContactNumber()
+                )
                 .availability(
                         DrtAvailability.CHECK_REQUIRED
                 )
@@ -129,6 +132,7 @@ public class DrtGuideService {
                 )
                 .serviceArea(null)
                 .serviceAreaName(null)
+                .contactNumber(null)
                 .availability(
                         DrtAvailability.OUT_OF_SERVICE_AREA
                 )
@@ -146,6 +150,7 @@ public class DrtGuideService {
                 )
                 .serviceArea(null)
                 .serviceAreaName(null)
+                .contactNumber(null)
                 .availability(
                         DrtAvailability.UNKNOWN
                 )

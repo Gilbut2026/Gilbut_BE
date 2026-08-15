@@ -44,7 +44,7 @@ class DrtGuideServiceTest {
 
     @Test
     @DisplayName(
-            "AI가 DRT를 추천하고 출도착지가 같은 권역이면 똑버스 안내를 생성한다"
+            "AI가 DRT를 추천하고 출도착지가 같은 권역이면 대표번호를 포함한 똑버스 안내를 생성한다"
     )
     void createsGuideForSameArea() {
         RouteCandidateRequest request =
@@ -140,6 +140,19 @@ class DrtGuideServiceTest {
         );
 
         assertThat(
+                result.getContactNumber()
+        ).isEqualTo(
+                DrtServiceArea.GWANGGYO
+                        .getContactNumber()
+        );
+
+        assertThat(
+                result.getContactNumber()
+        ).isEqualTo(
+                "1688-0181"
+        );
+
+        assertThat(
                 result.getAvailability()
         ).isEqualTo(
                 DrtAvailability.CHECK_REQUIRED
@@ -148,7 +161,7 @@ class DrtGuideServiceTest {
 
     @Test
     @DisplayName(
-            "출도착지가 다른 똑버스 권역이면 운행권역 밖으로 반환한다"
+            "출도착지가 다른 똑버스 권역이면 대표번호 없이 운행권역 밖으로 반환한다"
     )
     void returnsOutOfServiceAreaForDifferentAreas() {
         RouteCandidateRequest request =
@@ -238,11 +251,15 @@ class DrtGuideServiceTest {
         assertThat(
                 result.getServiceAreaName()
         ).isNull();
+
+        assertThat(
+                result.getContactNumber()
+        ).isNull();
     }
 
     @Test
     @DisplayName(
-            "출발지가 똑버스 운행권역이 아니면 운행권역 밖으로 반환한다"
+            "출발지가 똑버스 운행권역이 아니면 대표번호 없이 운행권역 밖으로 반환한다"
     )
     void returnsOutOfServiceAreaWhenOriginIsUnsupported() {
         RouteCandidateRequest request =
@@ -297,6 +314,18 @@ class DrtGuideServiceTest {
                 DrtAvailability.OUT_OF_SERVICE_AREA
         );
 
+        assertThat(
+                result.getServiceArea()
+        ).isNull();
+
+        assertThat(
+                result.getServiceAreaName()
+        ).isNull();
+
+        assertThat(
+                result.getContactNumber()
+        ).isNull();
+
         verify(
                 tmapReverseGeocodingClient,
                 never()
@@ -308,7 +337,7 @@ class DrtGuideServiceTest {
 
     @Test
     @DisplayName(
-            "리버스 지오코딩에 실패하면 똑버스 운행 여부를 UNKNOWN으로 반환한다"
+            "리버스 지오코딩에 실패하면 대표번호 없이 똑버스 운행 여부를 UNKNOWN으로 반환한다"
     )
     void returnsUnknownWhenReverseGeocodingFails() {
         RouteCandidateRequest request =
@@ -351,11 +380,19 @@ class DrtGuideServiceTest {
         assertThat(
                 result.getServiceArea()
         ).isNull();
+
+        assertThat(
+                result.getServiceAreaName()
+        ).isNull();
+
+        assertThat(
+                result.getContactNumber()
+        ).isNull();
     }
 
     @Test
     @DisplayName(
-            "DRT 추천 대상이지만 좌표가 없으면 운행 여부를 UNKNOWN으로 반환한다"
+            "DRT 추천 대상이지만 좌표가 없으면 대표번호 없이 운행 여부를 UNKNOWN으로 반환한다"
     )
     void returnsUnknownWhenCoordinatesAreMissing() {
         RouteCandidateRequest request =
@@ -388,6 +425,18 @@ class DrtGuideServiceTest {
         ).isEqualTo(
                 DrtAvailability.UNKNOWN
         );
+
+        assertThat(
+                result.getServiceArea()
+        ).isNull();
+
+        assertThat(
+                result.getServiceAreaName()
+        ).isNull();
+
+        assertThat(
+                result.getContactNumber()
+        ).isNull();
 
         verify(
                 tmapReverseGeocodingClient,
@@ -455,6 +504,26 @@ class DrtGuideServiceTest {
         ).search(
                 request.getOriginLatitude(),
                 request.getOriginLongitude()
+        );
+    }
+
+    @Test
+    @DisplayName(
+            "모든 똑버스 운행권역은 대표번호를 가진다"
+    )
+    void allServiceAreasHaveContactNumber() {
+        assertThat(
+                DrtServiceArea.values()
+        ).allSatisfy(
+                serviceArea -> {
+                    assertThat(
+                            serviceArea.getContactNumber()
+                    ).isNotBlank();
+
+                    assertThat(
+                            serviceArea.getDisplayName()
+                    ).isNotBlank();
+                }
         );
     }
 
