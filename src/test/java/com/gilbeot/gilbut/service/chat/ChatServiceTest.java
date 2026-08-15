@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.List;
 
@@ -184,6 +185,124 @@ class ChatServiceTest {
     }
 
     @Test
+    @DisplayName("주변 장소 검색이면 현재 위치 기준으로 장소를 검색한다")
+    void searchNearbyPlace() {
+
+        ChatSessionResponse session =
+                ChatSessionResponse.builder()
+                        .sessionId("session-1")
+                        .currentState(
+                                ChatState.DESTINATION_WAITING
+                        )
+                        .build();
+
+        AiChatAnalyzeResponse aiResponse =
+                AiChatAnalyzeResponse.builder()
+                        .intent(
+                                ChatIntent.FACILITY
+                        )
+                        .action(
+                                ChatAction.SEARCH_NEARBY_PLACE
+                        )
+                        .value("이비인후과")
+                        .build();
+
+        PlaceItemResponse place =
+                PlaceItemResponse.builder()
+                        .placeId("123")
+                        .name("수원이비인후과")
+                        .address("경기도 수원시")
+                        .latitude(37.263)
+                        .longitude(127.028)
+                        .build();
+
+        PlaceSearchResponse placeResponse =
+                PlaceSearchResponse.builder()
+                        .places(List.of(place))
+                        .build();
+
+        when(
+                chatSessionService
+                        .getOrCreateSession(1L)
+        ).thenReturn(session);
+
+        when(
+                aiChatClient.analyze(any())
+        ).thenReturn(aiResponse);
+
+        when(
+                placeSearchService.search(any())
+        ).thenReturn(placeResponse);
+
+        ChatMessageRequest request =
+                new ChatMessageRequest(
+                        "근처 이비인후과 찾아줘",
+                        37.2636,
+                        127.0286
+                );
+
+        ChatMessageResponse response =
+                chatService.chat(
+                        1L,
+                        request
+                );
+
+        assertThat(
+                response.getResponseType()
+        ).isEqualTo(
+                ChatResponseType.PLACE_CANDIDATES
+        );
+
+        assertThat(
+                response.getPlaces()
+        ).hasSize(1);
+
+        ArgumentCaptor<PlaceSearchRequest> captor =
+                ArgumentCaptor.forClass(
+                        PlaceSearchRequest.class
+                );
+
+        verify(
+                placeSearchService
+        ).search(
+                captor.capture()
+        );
+
+        PlaceSearchRequest captured =
+                captor.getValue();
+
+        assertThat(
+                captured.getKeyword()
+        ).isEqualTo(
+                "이비인후과"
+        );
+
+        assertThat(
+                captured.getLat()
+        ).isEqualTo(
+                "37.2636"
+        );
+
+        assertThat(
+                captured.getLon()
+        ).isEqualTo(
+                "127.0286"
+        );
+
+        assertThat(
+                captured.getRadiusKm()
+        ).isEqualTo(
+                "5"
+        );
+
+        assertThat(
+                captured.getSize()
+        ).isEqualTo(
+                "5"
+        );
+    }
+
+    @Test
     @DisplayName("사용자가 장소를 확정하면 대화 세션에 목적지를 저장한다")
     void confirmDestination() {
 
@@ -289,6 +408,63 @@ class ChatServiceTest {
         ).confirmDestination(
                 1L,
                 request
+        );
+    }
+    @Test
+    @DisplayName("주변 장소 검색인데 현재 위치가 없으면 위치 요청 응답을 반환한다")
+    void searchNearbyPlaceWithoutLocation() {
+
+        ChatSessionResponse session =
+                ChatSessionResponse.builder()
+                        .sessionId("session-1")
+                        .currentState(
+                                ChatState.DESTINATION_WAITING
+                        )
+                        .build();
+
+        AiChatAnalyzeResponse aiResponse =
+                AiChatAnalyzeResponse.builder()
+                        .intent(
+                                ChatIntent.FACILITY
+                        )
+                        .action(
+                                ChatAction.SEARCH_NEARBY_PLACE
+                        )
+                        .value("이비인후과")
+                        .build();
+
+        when(
+                chatSessionService
+                        .getOrCreateSession(1L)
+        ).thenReturn(session);
+
+        when(
+                aiChatClient.analyze(any())
+        ).thenReturn(aiResponse);
+
+        ChatMessageRequest request =
+                new ChatMessageRequest(
+                        "근처 이비인후과 찾아줘"
+                );
+
+        ChatMessageResponse response =
+                chatService.chat(
+                        1L,
+                        request
+                );
+
+        assertThat(
+                response.getResponseType()
+        ).isEqualTo(
+                ChatResponseType.LOCATION_REQUIRED
+        );
+
+        assertThat(
+                response.getPlaces()
+        ).isNull();
+
+        verifyNoInteractions(
+                placeSearchService
         );
     }
 }
