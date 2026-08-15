@@ -5,9 +5,9 @@ import com.gilbeot.gilbut.domain.chat.ChatState;
 import com.gilbeot.gilbut.domain.chat.OriginType;
 import com.gilbeot.gilbut.domain.home.HomePlace;
 import com.gilbeot.gilbut.domain.user.User;
+import com.gilbeot.gilbut.dto.chat.request.DepartureTimeConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.OriginConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.request.PlaceConfirmationRequest;
-import com.gilbeot.gilbut.dto.chat.request.DepartureTimeConfirmationRequest;
 import com.gilbeot.gilbut.dto.chat.response.ChatSessionResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
@@ -18,7 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
 import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -116,6 +118,62 @@ public class ChatSessionService {
         session.moveToDepartureTimeConfirmation();
 
         return ChatSessionResponse.from(session);
+    }
+
+    @Transactional
+    public ChatSessionResponse confirmDepartureTime(
+            Long userId,
+            DepartureTimeConfirmationRequest request
+    ) {
+        ChatSession session =
+                getOrCreateSessionEntity(userId);
+
+        if (session.getCurrentState()
+                != ChatState.DEPARTURE_TIME_CONFIRMATION) {
+
+            throw new CustomException(
+                    ErrorCode.CHAT_STATE_CONFLICT
+            );
+        }
+
+        LocalDateTime departureDateTime =
+                request.getDepartureDateTime();
+
+        LocalDateTime minimumAllowedTime =
+                LocalDateTime.now().minusMinutes(1);
+
+        if (departureDateTime.isBefore(
+                minimumAllowedTime
+        )) {
+            throw new CustomException(
+                    ErrorCode.INVALID_REQUEST
+            );
+        }
+
+        session.confirmDepartureTime(
+                departureDateTime
+        );
+
+        return ChatSessionResponse.from(session);
+    }
+
+    @Transactional
+    public void completeRouteCalculationIfActive(
+            Long userId,
+            String requestId
+    ) {
+        chatSessionRepository.findByUserId(userId)
+                .filter(
+                        session ->
+                                session.getCurrentState()
+                                        == ChatState.ROUTE_CALCULATING
+                )
+                .ifPresent(
+                        session ->
+                                session.completeRouteCalculation(
+                                        requestId
+                                )
+                );
     }
 
     private void confirmCurrentLocation(
@@ -221,42 +279,5 @@ public class ChatSessionService {
         return chatSessionRepository.save(
                 session
         );
-    }
-
-    @Transactional
-    public ChatSessionResponse confirmDepartureTime(
-            Long userId,
-            DepartureTimeConfirmationRequest request
-    ) {
-        ChatSession session =
-                getOrCreateSessionEntity(userId);
-
-        if (session.getCurrentState()
-                != ChatState.DEPARTURE_TIME_CONFIRMATION) {
-
-            throw new CustomException(
-                    ErrorCode.CHAT_STATE_CONFLICT
-            );
-        }
-
-        LocalDateTime departureDateTime =
-                request.getDepartureDateTime();
-
-        LocalDateTime minimumAllowedTime =
-                LocalDateTime.now().minusMinutes(1);
-
-        if (departureDateTime.isBefore(
-                minimumAllowedTime
-        )) {
-            throw new CustomException(
-                    ErrorCode.INVALID_REQUEST
-            );
-        }
-
-        session.confirmDepartureTime(
-                departureDateTime
-        );
-
-        return ChatSessionResponse.from(session);
     }
 }
