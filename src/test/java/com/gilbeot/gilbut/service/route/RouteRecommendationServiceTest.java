@@ -61,6 +61,9 @@ class RouteRecommendationServiceTest {
     @Mock
     private RouteHistoryService routeHistoryService;
 
+    @Mock
+    private RouteAccessibilitySummaryMapper routeAccessibilitySummaryMapper;
+
     private RouteRecommendationService routeRecommendationService;
 
     @BeforeEach
@@ -73,6 +76,7 @@ class RouteRecommendationServiceTest {
                         aiRouteScoringRequestMapper,
                         aiRouteScoringClient,
                         drtGuideService,
+                        routeAccessibilitySummaryMapper,
                         routeRecommendationReasonService,
                         routeHistoryService
                 );

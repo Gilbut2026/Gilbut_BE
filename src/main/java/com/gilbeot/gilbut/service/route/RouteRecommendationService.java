@@ -36,6 +36,7 @@ public class RouteRecommendationService {
     private final AiRouteScoringRequestMapper aiRouteScoringRequestMapper;
     private final AiRouteScoringClient aiRouteScoringClient;
     private final DrtGuideService drtGuideService;
+    private final RouteAccessibilitySummaryMapper routeAccessibilitySummaryMapper;
     private final RouteRecommendationReasonService routeRecommendationReasonService;
     private final RouteHistoryService routeHistoryService;
 
@@ -136,6 +137,7 @@ public class RouteRecommendationService {
 
         for (AiRouteScoringResponse.Result result
                 : scoringResponse.getResults()) {
+
             if (result == null
                     || result.getRouteId() == null
                     || result.getStatus() == null
@@ -249,35 +251,46 @@ public class RouteRecommendationService {
 
         List<RouteRecommendationItem> recommendations =
                 scoredResults.stream()
-                        .map(result ->
-                                RouteRecommendationItem.builder()
-                                        .routeId(
-                                                result.getRouteId()
-                                        )
-                                        .candidate(
-                                                candidateMap.get(
-                                                        result.getRouteId()
-                                                )
-                                        )
-                                        .score(
-                                                result.getScore()
-                                        )
-                                        .rank(
-                                                result.getRank()
-                                        )
-                                        .recommendationReason(
-                                                result.getRank() == 1
-                                                        ? recommendationReason
-                                                        : null
-                                        )
-                                        .scoreBreakdown(
-                                                result.getScoreBreakdown()
-                                        )
-                                        .slopeSummary(
-                                                result.getSlopeSummary()
-                                        )
-                                        .build()
-                        )
+                        .map(result -> {
+                            RouteCandidate candidate =
+                                    candidateMap.get(
+                                            result.getRouteId()
+                                    );
+
+                            return RouteRecommendationItem.builder()
+                                    .routeId(
+                                            result.getRouteId()
+                                    )
+                                    .candidate(candidate)
+                                    .score(
+                                            result.getScore()
+                                    )
+                                    .rank(
+                                            result.getRank()
+                                    )
+                                    .recommendationReason(
+                                            result.getRank() == 1
+                                                    ? recommendationReason
+                                                    : null
+                                    )
+                                    .accessibilitySummary(
+                                            routeAccessibilitySummaryMapper
+                                                    .toSummary(
+                                                            candidate,
+                                                            candidateResult
+                                                                    .getWalkingRoute(),
+                                                            candidateResult
+                                                                    .getTransitRoutes()
+                                                    )
+                                    )
+                                    .scoreBreakdown(
+                                            result.getScoreBreakdown()
+                                    )
+                                    .slopeSummary(
+                                            result.getSlopeSummary()
+                                    )
+                                    .build();
+                        })
                         .toList();
 
         List<AiRouteScoringResponse.Result> filteredResults =
