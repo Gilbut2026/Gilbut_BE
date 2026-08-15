@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
+import static org.mockito.Mockito.times;
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
 
@@ -302,6 +302,314 @@ class ChatServiceTest {
         );
     }
 
+    @Test
+    @DisplayName(
+            "기준 장소가 있으면 해당 장소 좌표를 기준으로 주변 장소를 검색한다"
+    )
+    void searchNearbyPlaceAroundReferencePlace() {
+
+        ChatSessionResponse session =
+                ChatSessionResponse.builder()
+                        .sessionId("session-1")
+                        .currentState(
+                                ChatState.DESTINATION_WAITING
+                        )
+                        .build();
+
+        AiChatAnalyzeResponse aiResponse =
+                AiChatAnalyzeResponse.builder()
+                        .intent(
+                                ChatIntent.FACILITY
+                        )
+                        .action(
+                                ChatAction.SEARCH_NEARBY_PLACE
+                        )
+                        .value("병원")
+                        .referencePlace("수원역")
+                        .build();
+
+        PlaceItemResponse referencePlace =
+                PlaceItemResponse.builder()
+                        .placeId("station-1")
+                        .name("수원역")
+                        .address(
+                                "경기도 수원시 팔달구"
+                        )
+                        .latitude(
+                                37.2661
+                        )
+                        .longitude(
+                                126.9998
+                        )
+                        .build();
+
+        PlaceSearchResponse referenceResponse =
+                PlaceSearchResponse.builder()
+                        .places(
+                                List.of(
+                                        referencePlace
+                                )
+                        )
+                        .build();
+
+        PlaceItemResponse hospital =
+                PlaceItemResponse.builder()
+                        .placeId("hospital-1")
+                        .name("수원역병원")
+                        .address(
+                                "경기도 수원시 팔달구"
+                        )
+                        .latitude(
+                                37.2670
+                        )
+                        .longitude(
+                                127.0010
+                        )
+                        .build();
+
+        PlaceSearchResponse hospitalResponse =
+                PlaceSearchResponse.builder()
+                        .places(
+                                List.of(
+                                        hospital
+                                )
+                        )
+                        .build();
+
+        when(
+                chatSessionService
+                        .getOrCreateSession(1L)
+        ).thenReturn(
+                session
+        );
+
+        when(
+                aiChatClient.analyze(
+                        any()
+                )
+        ).thenReturn(
+                aiResponse
+        );
+
+        when(
+                placeSearchService.search(
+                        any()
+                )
+        ).thenReturn(
+                referenceResponse,
+                hospitalResponse
+        );
+
+        ChatMessageRequest request =
+                new ChatMessageRequest(
+                        "수원역 근처 병원 찾아줘"
+                );
+
+        ChatMessageResponse response =
+                chatService.chat(
+                        1L,
+                        request
+                );
+
+        assertThat(
+                response.getResponseType()
+        ).isEqualTo(
+                ChatResponseType.PLACE_CANDIDATES
+        );
+
+        assertThat(
+                response.getMessage()
+        ).contains(
+                "수원역 근처"
+        );
+
+        assertThat(
+                response.getPlaces()
+        ).hasSize(1);
+
+        assertThat(
+                response.getPlaces()
+                        .get(0)
+                        .getName()
+        ).isEqualTo(
+                "수원역병원"
+        );
+
+        ArgumentCaptor<PlaceSearchRequest> captor =
+                ArgumentCaptor.forClass(
+                        PlaceSearchRequest.class
+                );
+
+        verify(
+                placeSearchService,
+                times(2)
+        ).search(
+                captor.capture()
+        );
+
+        List<PlaceSearchRequest> requests =
+                captor.getAllValues();
+
+        PlaceSearchRequest referenceRequest =
+                requests.get(0);
+
+        assertThat(
+                referenceRequest.getKeyword()
+        ).isEqualTo(
+                "수원역"
+        );
+
+        assertThat(
+                referenceRequest.getLat()
+        ).isNull();
+
+        assertThat(
+                referenceRequest.getLon()
+        ).isNull();
+
+        assertThat(
+                referenceRequest.getSize()
+        ).isEqualTo(
+                "5"
+        );
+
+        PlaceSearchRequest nearbyRequest =
+                requests.get(1);
+
+        assertThat(
+                nearbyRequest.getKeyword()
+        ).isEqualTo(
+                "병원"
+        );
+
+        assertThat(
+                nearbyRequest.getLat()
+        ).isEqualTo(
+                "37.2661"
+        );
+
+        assertThat(
+                nearbyRequest.getLon()
+        ).isEqualTo(
+                "126.9998"
+        );
+
+        assertThat(
+                nearbyRequest.getRadiusKm()
+        ).isEqualTo(
+                "5"
+        );
+
+        assertThat(
+                nearbyRequest.getSize()
+        ).isEqualTo(
+                "5"
+        );
+    }
+
+    @Test
+    @DisplayName(
+            "기준 장소를 찾지 못하면 주변 검색을 진행하지 않고 안내 메시지를 반환한다"
+    )
+    void searchNearbyPlaceWhenReferencePlaceNotFound() {
+
+        ChatSessionResponse session =
+                ChatSessionResponse.builder()
+                        .sessionId("session-1")
+                        .currentState(
+                                ChatState.DESTINATION_WAITING
+                        )
+                        .build();
+
+        AiChatAnalyzeResponse aiResponse =
+                AiChatAnalyzeResponse.builder()
+                        .intent(
+                                ChatIntent.FACILITY
+                        )
+                        .action(
+                                ChatAction.SEARCH_NEARBY_PLACE
+                        )
+                        .value("병원")
+                        .referencePlace(
+                                "존재하지않는장소"
+                        )
+                        .build();
+
+        PlaceSearchResponse emptyResponse =
+                PlaceSearchResponse.builder()
+                        .places(
+                                List.of()
+                        )
+                        .build();
+
+        when(
+                chatSessionService
+                        .getOrCreateSession(1L)
+        ).thenReturn(
+                session
+        );
+
+        when(
+                aiChatClient.analyze(
+                        any()
+                )
+        ).thenReturn(
+                aiResponse
+        );
+
+        when(
+                placeSearchService.search(
+                        any()
+                )
+        ).thenReturn(
+                emptyResponse
+        );
+
+        ChatMessageRequest request =
+                new ChatMessageRequest(
+                        "존재하지않는장소 근처 병원 찾아줘"
+                );
+
+        ChatMessageResponse response =
+                chatService.chat(
+                        1L,
+                        request
+                );
+
+        assertThat(
+                response.getResponseType()
+        ).isEqualTo(
+                ChatResponseType.TEXT
+        );
+
+        assertThat(
+                response.getMessage()
+        ).contains(
+                "존재하지않는장소 위치를 찾지 못했어요."
+        );
+
+        assertThat(
+                response.getPlaces()
+        ).isNull();
+
+        ArgumentCaptor<PlaceSearchRequest> captor =
+                ArgumentCaptor.forClass(
+                        PlaceSearchRequest.class
+                );
+
+        verify(
+                placeSearchService
+        ).search(
+                captor.capture()
+        );
+
+        assertThat(
+                captor.getValue()
+                        .getKeyword()
+        ).isEqualTo(
+                "존재하지않는장소"
+        );
+    }
     @Test
     @DisplayName("사용자가 장소를 확정하면 대화 세션에 목적지를 저장한다")
     void confirmDestination() {

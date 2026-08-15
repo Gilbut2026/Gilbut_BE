@@ -18,4 +18,6 @@ public class AiChatAnalyzeResponse {
     private ChatAction action;
 
     private String value;
+
+    private String referencePlace;
 }
