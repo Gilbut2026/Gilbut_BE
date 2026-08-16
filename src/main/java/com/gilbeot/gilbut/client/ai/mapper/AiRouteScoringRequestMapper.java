@@ -10,6 +10,7 @@ import com.gilbeot.gilbut.dto.route.RouteWalkSegment;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -17,10 +18,12 @@ public class AiRouteScoringRequestMapper {
 
     public AiRouteScoringRequest toRequest(
             MobilityProfileResponse profile,
-            RouteCandidateResult routeCandidateResult
+            RouteCandidateResult routeCandidateResult,
+            LocalDateTime departureDateTime
     ) {
         return AiRouteScoringRequest.builder()
                 .requestId(routeCandidateResult.getRequestId())
+                .departureDateTime(departureDateTime)
                 .userContext(toUserContext(profile))
                 .candidates(
                         routeCandidateResult.getCandidates()

@@ -64,7 +64,8 @@ public class RouteRecommendationService {
         AiRouteScoringRequest scoringRequest =
                 aiRouteScoringRequestMapper.toRequest(
                         mobilityProfile,
-                        candidateResult
+                        candidateResult,
+                        request.getDepartureDateTime()
                 );
 
         AiRouteScoringResponse scoringResponse =

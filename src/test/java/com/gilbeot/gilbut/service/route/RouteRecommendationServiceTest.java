@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,6 +68,7 @@ class RouteRecommendationServiceTest {
 
     @Mock
     private ChatSessionService chatSessionService;
+
     private RouteRecommendationService routeRecommendationService;
 
     @BeforeEach
@@ -91,12 +93,22 @@ class RouteRecommendationServiceTest {
     void recommend() {
         Long userId = 1L;
 
+        LocalDateTime departureDateTime =
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        16,
+                        15,
+                        0
+                );
+
         RouteCandidateRequest request =
                 RouteCandidateRequest.builder()
                         .originLatitude(37.2636)
                         .originLongitude(127.0286)
                         .destinationLatitude(37.2750)
                         .destinationLongitude(127.0300)
+                        .departureDateTime(departureDateTime)
                         .build();
 
         RouteCandidate candidate =
@@ -132,6 +144,7 @@ class RouteRecommendationServiceTest {
         AiRouteScoringRequest scoringRequest =
                 AiRouteScoringRequest.builder()
                         .requestId("request-1")
+                        .departureDateTime(departureDateTime)
                         .candidates(List.of())
                         .build();
 
@@ -207,7 +220,8 @@ class RouteRecommendationServiceTest {
         when(
                 aiRouteScoringRequestMapper.toRequest(
                         mobilityProfile,
-                        candidateResult
+                        candidateResult,
+                        departureDateTime
                 )
         ).thenReturn(scoringRequest);
 
@@ -301,6 +315,14 @@ class RouteRecommendationServiceTest {
         );
 
         verify(
+                aiRouteScoringRequestMapper
+        ).toRequest(
+                mobilityProfile,
+                candidateResult,
+                departureDateTime
+        );
+
+        verify(
                 routeRecommendationReasonService
         ).createReason(
                 candidate,
@@ -323,6 +345,7 @@ class RouteRecommendationServiceTest {
                 request,
                 result
         );
+
         verify(
                 chatSessionService
         ).completeRouteCalculationIfActive(
@@ -336,12 +359,22 @@ class RouteRecommendationServiceTest {
     void recommendWithRankedRoutes() {
         Long userId = 1L;
 
+        LocalDateTime departureDateTime =
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        16,
+                        15,
+                        0
+                );
+
         RouteCandidateRequest request =
                 RouteCandidateRequest.builder()
                         .originLatitude(37.2636)
                         .originLongitude(127.0286)
                         .destinationLatitude(37.2750)
                         .destinationLongitude(127.0300)
+                        .departureDateTime(departureDateTime)
                         .build();
 
         RouteCandidate firstCandidate =
@@ -398,6 +431,7 @@ class RouteRecommendationServiceTest {
         AiRouteScoringRequest scoringRequest =
                 AiRouteScoringRequest.builder()
                         .requestId("request-1")
+                        .departureDateTime(departureDateTime)
                         .candidates(List.of())
                         .build();
 
@@ -459,7 +493,8 @@ class RouteRecommendationServiceTest {
         when(
                 aiRouteScoringRequestMapper.toRequest(
                         mobilityProfile,
-                        candidateResult
+                        candidateResult,
+                        departureDateTime
                 )
         ).thenReturn(scoringRequest);
 
@@ -559,8 +594,18 @@ class RouteRecommendationServiceTest {
     void rejectsDifferentRequestId() {
         Long userId = 1L;
 
+        LocalDateTime departureDateTime =
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        16,
+                        15,
+                        0
+                );
+
         RouteCandidateRequest request =
                 RouteCandidateRequest.builder()
+                        .departureDateTime(departureDateTime)
                         .build();
 
         RouteCandidateResult candidateResult =
@@ -576,6 +621,7 @@ class RouteRecommendationServiceTest {
         AiRouteScoringRequest scoringRequest =
                 AiRouteScoringRequest.builder()
                         .requestId("request-1")
+                        .departureDateTime(departureDateTime)
                         .candidates(List.of())
                         .build();
 
@@ -603,7 +649,8 @@ class RouteRecommendationServiceTest {
         when(
                 aiRouteScoringRequestMapper.toRequest(
                         mobilityProfile,
-                        candidateResult
+                        candidateResult,
+                        departureDateTime
                 )
         ).thenReturn(scoringRequest);
 
