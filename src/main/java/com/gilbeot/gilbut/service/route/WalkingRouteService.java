@@ -39,6 +39,13 @@ public class WalkingRouteService {
                     "0"
             );
 
+    private static final WalkingRouteSearchOption SHORTEST_OPTION =
+            new WalkingRouteSearchOption(
+                    WalkingRouteOption.SHORTEST,
+                    "walking-shortest-",
+                    "10"
+            );
+
     private static final WalkingRouteSearchOption AVOID_STAIRS_OPTION =
             new WalkingRouteSearchOption(
                     WalkingRouteOption.AVOID_STAIRS,
@@ -72,7 +79,7 @@ public class WalkingRouteService {
                         )
                 );
 
-        removeDuplicateAvoidStairsRoute(routes);
+        removeRedundantAvoidStairsRoute(routes);
 
         if (routes.isEmpty()) {
             throw new CustomException(
@@ -127,6 +134,7 @@ public class WalkingRouteService {
     ) {
         return switch (routeOption) {
             case DEFAULT -> DEFAULT_OPTION;
+            case SHORTEST -> SHORTEST_OPTION;
             case AVOID_STAIRS -> AVOID_STAIRS_OPTION;
         };
     }
@@ -187,30 +195,71 @@ public class WalkingRouteService {
                 .equals(stair.getCount());
     }
 
-    private void removeDuplicateAvoidStairsRoute(
+    private void removeRedundantAvoidStairsRoute(
             List<WalkingRouteItemResponse> routes
     ) {
-        Optional<WalkingRouteItemResponse> defaultRoute =
+        Optional<WalkingRouteItemResponse> shortestRoute =
                 routes.stream()
                         .filter(route ->
                                 route.getRouteOption()
-                                        == WalkingRouteOption.DEFAULT
+                                        == WalkingRouteOption.SHORTEST
                         )
                         .findFirst();
 
-        if (defaultRoute.isEmpty()) {
+        if (shortestRoute.isPresent()
+                && hasNoStair(shortestRoute.get())) {
+            routes.removeIf(route ->
+                    route.getRouteOption()
+                            == WalkingRouteOption.AVOID_STAIRS
+            );
+            return;
+        }
+
+        List<WalkingRouteItemResponse> comparisonRoutes =
+                routes.stream()
+                        .filter(route ->
+                                route.getRouteOption()
+                                        != WalkingRouteOption.AVOID_STAIRS
+                        )
+                        .toList();
+
+        if (comparisonRoutes.isEmpty()) {
             return;
         }
 
         routes.removeIf(route ->
                 route.getRouteOption()
                         == WalkingRouteOption.AVOID_STAIRS
-                        && hasSameGeometry(
-                        defaultRoute.get(),
-                        route
-                )
+                        && comparisonRoutes.stream()
+                        .anyMatch(comparisonRoute ->
+                                hasSameGeometry(
+                                        comparisonRoute,
+                                        route
+                                )
+                        )
         );
     }
+
+    private boolean hasNoStair(
+            WalkingRouteItemResponse route
+    ) {
+        RouteAccessibilitySignals signals =
+                route.getAccessibilitySignals();
+
+        if (signals == null
+                || signals.getStair() == null) {
+            return false;
+        }
+
+        RouteAccessibilitySignals.Signal stair =
+                signals.getStair();
+
+        return stair.getState()
+                == RouteAccessibilitySignals.State.ABSENT
+                && Integer.valueOf(0)
+                .equals(stair.getCount());
+    }
+
 
     private boolean hasSameGeometry(
             WalkingRouteItemResponse first,

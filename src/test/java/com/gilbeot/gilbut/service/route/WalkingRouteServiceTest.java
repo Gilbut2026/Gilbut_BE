@@ -437,14 +437,143 @@ class WalkingRouteServiceTest {
                 );
     }
 
+    @Test
+    @DisplayName("최단 경로에 계단이 있고 계단 회피 경로가 다르면 두 경로를 모두 반환한다")
+    void keepShortestAndAvoidStairsRoutesWhenComparisonIsMeaningful()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(
+                tmapResponseWithStair(),
+                tmapResponseWithoutStair()
+        );
+
+        WalkingRouteRequest request =
+                walkingRouteRequest();
+
+        request.setRouteOptions(
+                List.of(
+                        WalkingRouteOption.SHORTEST,
+                        WalkingRouteOption.AVOID_STAIRS
+                )
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(request);
+
+        assertThat(response.getRoutes())
+                .hasSize(2);
+
+        assertThat(response.getRoutes())
+                .extracting(
+                        WalkingRouteItemResponse::getRouteOption
+                )
+                .containsExactly(
+                        WalkingRouteOption.SHORTEST,
+                        WalkingRouteOption.AVOID_STAIRS
+                );
+    }
+
+    @Test
+    @DisplayName("최단 경로에 계단이 없으면 별도 계단 회피 경로를 제거한다")
+    void removeAvoidStairsRouteWhenShortestRouteHasNoStair()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(
+                tmapResponseWithoutStairSameGeometry(),
+                tmapResponseWithoutStair()
+        );
+
+        WalkingRouteRequest request =
+                walkingRouteRequest();
+
+        request.setRouteOptions(
+                List.of(
+                        WalkingRouteOption.SHORTEST,
+                        WalkingRouteOption.AVOID_STAIRS
+                )
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(request);
+
+        assertThat(response.getRoutes())
+                .hasSize(1);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteOption()
+        ).isEqualTo(
+                WalkingRouteOption.SHORTEST
+        );
+    }
+
+    @Test
+    @DisplayName("최단 보행 경로 옵션은 TMAP searchOption 10으로 조회한다")
+    void searchWalkingRouteWithShortestOptionOnly()
+            throws Exception {
+        when(
+                tmapWalkingRouteClient.search(any())
+        ).thenReturn(
+                tmapResponseWithStair()
+        );
+
+        WalkingRouteRequest request =
+                walkingRouteRequest();
+
+        request.setRouteOptions(
+                List.of(
+                        WalkingRouteOption.SHORTEST
+                )
+        );
+
+        WalkingRouteResponse response =
+                walkingRouteService.search(request);
+
+        assertThat(response.getRoutes())
+                .hasSize(1);
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteOption()
+        ).isEqualTo(
+                WalkingRouteOption.SHORTEST
+        );
+
+        assertThat(
+                response.getRoutes()
+                        .get(0)
+                        .getRouteId()
+        ).startsWith(
+                "walking-shortest-"
+        );
+
+        ArgumentCaptor<TmapWalkingRouteRequest> captor =
+                ArgumentCaptor.forClass(
+                        TmapWalkingRouteRequest.class
+                );
+
+        verify(
+                tmapWalkingRouteClient
+        ).search(captor.capture());
+
+        assertThat(
+                captor.getValue()
+                        .getSearchOption()
+        ).isEqualTo("10");
+    }
+
     private WalkingRouteRequest walkingRouteRequest() {
         WalkingRouteRequest.RoutePlaceRequest origin =
                 new WalkingRouteRequest.RoutePlaceRequest();
 
         origin.setPlaceId("origin-1");
-        origin.setName("수원역");
+        origin.setName("수원시청");
         origin.setAddress(
-                "경기도 수원시 팔달구 덕영대로 924"
+                "경기도 수원시 팔달구 효원로 241"
         );
         origin.setLatitude(37.2636);
         origin.setLongitude(127.0286);
