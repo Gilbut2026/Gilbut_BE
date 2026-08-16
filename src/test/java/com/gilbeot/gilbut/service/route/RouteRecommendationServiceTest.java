@@ -7,6 +7,8 @@ import com.gilbeot.gilbut.client.ai.dto.scoring.type.ScoringResultStatus;
 import com.gilbeot.gilbut.client.ai.mapper.AiRouteScoringRequestMapper;
 import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
+import com.gilbeot.gilbut.domain.user.type.MobilityAid;
+import com.gilbeot.gilbut.domain.user.type.StairLevel;
 import com.gilbeot.gilbut.dto.drt.DrtAvailability;
 import com.gilbeot.gilbut.dto.drt.DrtGuideResponse;
 import com.gilbeot.gilbut.dto.drt.DrtServiceArea;
@@ -19,10 +21,10 @@ import com.gilbeot.gilbut.dto.route.TransitRouteFailure;
 import com.gilbeot.gilbut.dto.route.TransitRouteFailureCode;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.service.chat.ChatSessionService;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
 import com.gilbeot.gilbut.service.history.RouteHistoryService;
 import com.gilbeot.gilbut.service.user.UserMobilityProfileService;
-import com.gilbeot.gilbut.service.chat.ChatSessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -146,6 +148,12 @@ class RouteRecommendationServiceTest {
 
         MobilityProfileResponse mobilityProfile =
                 MobilityProfileResponse.builder()
+                        .stairLevel(
+                                StairLevel.AVAILABLE
+                        )
+                        .mobilityAid(
+                                MobilityAid.NOT_USED
+                        )
                         .build();
 
         AiRouteScoringRequest scoringRequest =
@@ -210,19 +218,24 @@ class RouteRecommendationServiceTest {
                         + "가장 이동하기 편한 경로로 판단했어요.";
 
         when(
+                userMobilityProfileService
+                        .getMobilityProfile(userId)
+        ).thenReturn(mobilityProfile);
+
+        when(
                 routeCandidateAggregationService
-                        .createCandidates(request)
+                        .createCandidates(
+                                request,
+                                List.of(
+                                        WalkingRouteOption.DEFAULT
+                                )
+                        )
         ).thenReturn(candidateResult);
 
         when(
                 routeAccessibilityEnrichmentService
                         .enrich(candidateResult)
         ).thenReturn(candidateResult);
-
-        when(
-                userMobilityProfileService
-                        .getMobilityProfile(userId)
-        ).thenReturn(mobilityProfile);
 
         when(
                 aiRouteScoringRequestMapper.toRequest(
@@ -326,6 +339,15 @@ class RouteRecommendationServiceTest {
                         .getAvailability()
         ).isEqualTo(
                 DrtAvailability.CHECK_REQUIRED
+        );
+
+        verify(
+                routeCandidateAggregationService
+        ).createCandidates(
+                request,
+                List.of(
+                        WalkingRouteOption.DEFAULT
+                )
         );
 
         verify(
@@ -440,6 +462,12 @@ class RouteRecommendationServiceTest {
 
         MobilityProfileResponse mobilityProfile =
                 MobilityProfileResponse.builder()
+                        .stairLevel(
+                                StairLevel.AVAILABLE
+                        )
+                        .mobilityAid(
+                                MobilityAid.NOT_USED
+                        )
                         .build();
 
         AiRouteScoringRequest scoringRequest =
@@ -490,19 +518,24 @@ class RouteRecommendationServiceTest {
                         + "이 경로를 추천했어요.";
 
         when(
+                userMobilityProfileService
+                        .getMobilityProfile(userId)
+        ).thenReturn(mobilityProfile);
+
+        when(
                 routeCandidateAggregationService
-                        .createCandidates(request)
+                        .createCandidates(
+                                request,
+                                List.of(
+                                        WalkingRouteOption.DEFAULT
+                                )
+                        )
         ).thenReturn(candidateResult);
 
         when(
                 routeAccessibilityEnrichmentService
                         .enrich(candidateResult)
         ).thenReturn(candidateResult);
-
-        when(
-                userMobilityProfileService
-                        .getMobilityProfile(userId)
-        ).thenReturn(mobilityProfile);
 
         when(
                 aiRouteScoringRequestMapper.toRequest(
@@ -586,6 +619,15 @@ class RouteRecommendationServiceTest {
         ).isNull();
 
         verify(
+                routeCandidateAggregationService
+        ).createCandidates(
+                request,
+                List.of(
+                        WalkingRouteOption.DEFAULT
+                )
+        );
+
+        verify(
                 routeRecommendationReasonService
         ).createReason(
                 firstCandidate,
@@ -600,6 +642,164 @@ class RouteRecommendationServiceTest {
                 userId,
                 request,
                 result
+        );
+    }
+
+    @Test
+    @DisplayName("계단 이용이 조금 어려우면 최단 경로와 계단 회피 경로를 함께 요청한다")
+    void recommendsShortestAndAvoidStairsForSlightlyDifficultUser() {
+        Long userId = 1L;
+
+        LocalDateTime departureDateTime =
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        16,
+                        15,
+                        0
+                );
+
+        RouteCandidateRequest request =
+                RouteCandidateRequest.builder()
+                        .originLatitude(37.2636)
+                        .originLongitude(127.0286)
+                        .destinationLatitude(37.2750)
+                        .destinationLongitude(127.0300)
+                        .departureDateTime(departureDateTime)
+                        .build();
+
+        RouteCandidate candidate =
+                RouteCandidate.builder()
+                        .routeId("walking-shortest-1")
+                        .routeType(RouteType.WALKING)
+                        .routeOption(
+                                WalkingRouteOption.SHORTEST
+                        )
+                        .providerRank(1)
+                        .metrics(
+                                RouteMetrics.builder()
+                                        .totalTimeSec(900)
+                                        .totalWalkTimeSec(900)
+                                        .totalWalkDistanceM(1000)
+                                        .transferCount(0)
+                                        .build()
+                        )
+                        .build();
+
+        RouteCandidateResult candidateResult =
+                RouteCandidateResult.builder()
+                        .requestId("request-1")
+                        .candidates(
+                                List.of(candidate)
+                        )
+                        .build();
+
+        MobilityProfileResponse mobilityProfile =
+                MobilityProfileResponse.builder()
+                        .stairLevel(
+                                StairLevel.SLIGHTLY_DIFFICULT
+                        )
+                        .mobilityAid(
+                                MobilityAid.NOT_USED
+                        )
+                        .build();
+
+        AiRouteScoringRequest scoringRequest =
+                AiRouteScoringRequest.builder()
+                        .requestId("request-1")
+                        .departureDateTime(departureDateTime)
+                        .candidates(List.of())
+                        .build();
+
+        AiRouteScoringResponse.Result scoringResult =
+                AiRouteScoringResponse.Result.builder()
+                        .routeId("walking-shortest-1")
+                        .status(
+                                ScoringResultStatus.SCORED
+                        )
+                        .score(90.0)
+                        .rank(1)
+                        .filterCodes(List.of())
+                        .build();
+
+        AiRouteScoringResponse scoringResponse =
+                AiRouteScoringResponse.builder()
+                        .requestId("request-1")
+                        .scoringVersion(
+                                "accessibility-score-v1"
+                        )
+                        .results(
+                                List.of(scoringResult)
+                        )
+                        .build();
+
+        when(
+                userMobilityProfileService
+                        .getMobilityProfile(userId)
+        ).thenReturn(mobilityProfile);
+
+        when(
+                routeCandidateAggregationService
+                        .createCandidates(
+                                request,
+                                List.of(
+                                        WalkingRouteOption.SHORTEST,
+                                        WalkingRouteOption.AVOID_STAIRS
+                                )
+                        )
+        ).thenReturn(candidateResult);
+
+        when(
+                routeAccessibilityEnrichmentService
+                        .enrich(candidateResult)
+        ).thenReturn(candidateResult);
+
+        when(
+                aiRouteScoringRequestMapper.toRequest(
+                        mobilityProfile,
+                        candidateResult,
+                        departureDateTime
+                )
+        ).thenReturn(scoringRequest);
+
+        when(
+                aiRouteScoringClient.score(
+                        scoringRequest
+                )
+        ).thenReturn(scoringResponse);
+
+        when(
+                drtGuideService.createGuide(
+                        request,
+                        null
+                )
+        ).thenReturn(null);
+
+        when(
+                routeRecommendationReasonService
+                        .createReason(
+                                candidate,
+                                scoringResult,
+                                null,
+                                null
+                        )
+        ).thenReturn(
+                "계단 이용 설정을 반영해 경로를 비교했어요."
+        );
+
+        routeRecommendationService.recommend(
+                userId,
+                request
+        );
+
+        verify(
+                routeCandidateAggregationService
+        ).createCandidates(
+                request,
+                List.of(
+                        WalkingRouteOption.SHORTEST,
+                        WalkingRouteOption.AVOID_STAIRS
+                )
         );
     }
 
@@ -630,6 +830,12 @@ class RouteRecommendationServiceTest {
 
         MobilityProfileResponse mobilityProfile =
                 MobilityProfileResponse.builder()
+                        .stairLevel(
+                                StairLevel.AVAILABLE
+                        )
+                        .mobilityAid(
+                                MobilityAid.NOT_USED
+                        )
                         .build();
 
         AiRouteScoringRequest scoringRequest =
@@ -646,19 +852,24 @@ class RouteRecommendationServiceTest {
                         .build();
 
         when(
+                userMobilityProfileService
+                        .getMobilityProfile(userId)
+        ).thenReturn(mobilityProfile);
+
+        when(
                 routeCandidateAggregationService
-                        .createCandidates(request)
+                        .createCandidates(
+                                request,
+                                List.of(
+                                        WalkingRouteOption.DEFAULT
+                                )
+                        )
         ).thenReturn(candidateResult);
 
         when(
                 routeAccessibilityEnrichmentService
                         .enrich(candidateResult)
         ).thenReturn(candidateResult);
-
-        when(
-                userMobilityProfileService
-                        .getMobilityProfile(userId)
-        ).thenReturn(mobilityProfile);
 
         when(
                 aiRouteScoringRequestMapper.toRequest(

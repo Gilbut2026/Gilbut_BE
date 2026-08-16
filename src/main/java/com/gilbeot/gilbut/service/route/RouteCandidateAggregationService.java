@@ -9,6 +9,7 @@ import com.gilbeot.gilbut.dto.route.transit.request.TransitRouteRequest;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
+import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.global.exception.TransitRouteSearchException;
@@ -30,6 +31,16 @@ public class RouteCandidateAggregationService {
     public RouteCandidateResult createCandidates(
             RouteCandidateRequest request
     ) {
+        return createCandidates(
+                request,
+                null
+        );
+    }
+
+    public RouteCandidateResult createCandidates(
+            RouteCandidateRequest request,
+            List<WalkingRouteOption> walkingRouteOptions
+    ) {
         List<RouteCandidate> candidates =
                 new ArrayList<>();
 
@@ -40,7 +51,10 @@ public class RouteCandidateAggregationService {
         try {
             walkingRoute =
                     walkingRouteService.search(
-                            toWalkingRouteRequest(request)
+                            toWalkingRouteRequest(
+                                    request,
+                                    walkingRouteOptions
+                            )
                     );
 
             candidates.addAll(
@@ -109,7 +123,8 @@ public class RouteCandidateAggregationService {
     }
 
     private WalkingRouteRequest toWalkingRouteRequest(
-            RouteCandidateRequest request
+            RouteCandidateRequest request,
+            List<WalkingRouteOption> walkingRouteOptions
     ) {
         if (request == null) {
             throw new CustomException(
@@ -142,6 +157,7 @@ public class RouteCandidateAggregationService {
 
         walkingRequest.setOrigin(origin);
         walkingRequest.setDestination(destination);
+        walkingRequest.setRouteOptions(walkingRouteOptions);
 
         return walkingRequest;
     }

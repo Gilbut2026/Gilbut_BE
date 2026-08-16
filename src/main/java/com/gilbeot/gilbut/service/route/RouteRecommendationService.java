@@ -12,6 +12,8 @@ import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteRecommendationItem;
 import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
+import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
+import com.gilbeot.gilbut.domain.user.type.MobilityAid;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
@@ -46,19 +48,25 @@ public class RouteRecommendationService {
             Long userId,
             RouteCandidateRequest request
     ) {
+        MobilityProfileResponse mobilityProfile =
+                userMobilityProfileService.getMobilityProfile(
+                        userId
+                );
+
+        List<WalkingRouteOption> walkingRouteOptions =
+                resolveWalkingRouteOptions(
+                        mobilityProfile
+                );
+
         RouteCandidateResult candidateResult =
                 routeCandidateAggregationService.createCandidates(
-                        request
+                        request,
+                        walkingRouteOptions
                 );
 
         candidateResult =
                 routeAccessibilityEnrichmentService.enrich(
                         candidateResult
-                );
-
-        MobilityProfileResponse mobilityProfile =
-                userMobilityProfileService.getMobilityProfile(
-                        userId
                 );
 
         AiRouteScoringRequest scoringRequest =
@@ -103,6 +111,46 @@ public class RouteRecommendationService {
         );
 
         return result;
+    }
+
+    private List<WalkingRouteOption> resolveWalkingRouteOptions(
+            MobilityProfileResponse mobilityProfile
+    ) {
+        if (mobilityProfile == null) {
+            return List.of(
+                    WalkingRouteOption.DEFAULT,
+                    WalkingRouteOption.AVOID_STAIRS
+            );
+        }
+
+        if (mobilityProfile.getMobilityAid()
+                == MobilityAid.WHEELCHAIR) {
+            return List.of(
+                    WalkingRouteOption.AVOID_STAIRS
+            );
+        }
+
+        if (mobilityProfile.getStairLevel() == null) {
+            return List.of(
+                    WalkingRouteOption.DEFAULT,
+                    WalkingRouteOption.AVOID_STAIRS
+            );
+        }
+
+        return switch (mobilityProfile.getStairLevel()) {
+            case AVAILABLE -> List.of(
+                    WalkingRouteOption.DEFAULT
+            );
+
+            case SLIGHTLY_DIFFICULT -> List.of(
+                    WalkingRouteOption.SHORTEST,
+                    WalkingRouteOption.AVOID_STAIRS
+            );
+
+            case DIFFICULT -> List.of(
+                    WalkingRouteOption.AVOID_STAIRS
+            );
+        };
     }
 
     private void validateResponse(
