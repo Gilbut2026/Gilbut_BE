@@ -13,6 +13,7 @@ import com.gilbeot.gilbut.domain.user.type.WalkingDuration;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -20,6 +21,7 @@ import java.util.List;
 public class AiRouteScoringRequest {
 
     private String requestId;
+    private LocalDateTime departureDateTime;
     private UserContext userContext;
     private List<Candidate> candidates;
 

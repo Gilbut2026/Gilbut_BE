@@ -20,6 +20,7 @@ import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -123,14 +124,27 @@ class AiRouteScoringRequestMapperTest {
                         )
                         .build();
 
+        LocalDateTime departureDateTime =
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        16,
+                        15,
+                        0
+                );
+
         AiRouteScoringRequest request =
                 mapper.toRequest(
                         profile,
-                        result
+                        result,
+                        departureDateTime
                 );
 
         assertThat(request.getRequestId())
                 .isEqualTo("request-1");
+
+        assertThat(request.getDepartureDateTime())
+                .isEqualTo(departureDateTime);
 
         assertThat(
                 request.getUserContext()
