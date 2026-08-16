@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gilbeot.gilbut.client.tmap.dto.place.TmapPlaceSearchRequest;
 import com.gilbeot.gilbut.client.tmap.dto.place.TmapPlaceSearchResponse;
 import com.gilbeot.gilbut.dto.place.request.PlaceSearchRequest;
+import com.gilbeot.gilbut.dto.place.request.PlaceSearchSort;
 import com.gilbeot.gilbut.dto.place.response.PlaceItemResponse;
 import com.gilbeot.gilbut.dto.place.response.PlaceSearchResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
@@ -35,7 +36,7 @@ public class PlaceSearchService {
     private static final String TMAP_POI_URL =
             "https://apis.openapi.sk.com/tmap/pois";
     private static final int DEFAULT_PAGE = 1;
-    private static final int DEFAULT_SIZE = 10;
+    private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 50;
     private static final int DEFAULT_RADIUS_KM = 5;
     private static final int MIN_RADIUS_KM = 1;
@@ -95,8 +96,18 @@ public class PlaceSearchService {
 
         boolean hasCoordinates = hasLat;
         boolean hasRadius = StringUtils.hasText(request.getRadiusKm());
+        PlaceSearchSort sort =
+                PlaceSearchSort.from(
+                        request.getSort(),
+                        hasCoordinates
+                );
 
         if (!hasCoordinates && hasRadius) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (sort == PlaceSearchSort.DISTANCE
+                && !hasCoordinates) {
             throw new CustomException(ErrorCode.INVALID_REQUEST);
         }
 
@@ -119,6 +130,7 @@ public class PlaceSearchService {
                 .radiusKm(radius)
                 .page(parsePage(request.getPage()))
                 .size(parseSize(request.getSize()))
+                .sort(sort)
                 .build();
     }
 
@@ -224,17 +236,18 @@ public class PlaceSearchService {
                         .queryParam("reqCoordType", "WGS84GEO")
                         .queryParam("resCoordType", "WGS84GEO")
                         .queryParam("multiPoint", "N")
-                        .queryParam("poiGroupYn", "N");
+                        .queryParam("poiGroupYn", "N")
+                        .queryParam(
+                                "searchtypCd",
+                                request.getSort()
+                                        .getTmapCode()
+                        );
 
         if (request.hasCoordinates()) {
             builder
-                    .queryParam("searchtypCd", "R")
                     .queryParam("centerLat", request.getCenterLat())
                     .queryParam("centerLon", request.getCenterLon())
                     .queryParam("radius", request.getRadiusKm());
-
-        } else {
-            builder.queryParam("searchtypCd", "A");
         }
 
         return builder

@@ -15,4 +15,5 @@ public class PlaceSearchRequest {
     private String radiusKm;
     private String page;
     private String size;
+    private String sort;
 }
