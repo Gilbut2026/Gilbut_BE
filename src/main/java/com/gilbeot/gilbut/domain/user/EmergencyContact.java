@@ -20,32 +20,26 @@ public class EmergencyContact extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 연락처 이름
     @Column(nullable = false, length = 30)
     private String name;
 
-    // 관계
     @Column(nullable = false, length = 30)
     private String relationship;
 
-    // 전화번호
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
 
-    // SOS 연락 우선순위
     @Column(nullable = false)
     private Integer priority;
 
     public void update(
             String name,
             String relationship,
-            String phoneNumber,
-            Integer priority
+            String phoneNumber
     ) {
         this.name = name;
         this.relationship = relationship;
         this.phoneNumber = phoneNumber;
-        this.priority = priority;
     }
 
     public void updatePriority(Integer priority) {
