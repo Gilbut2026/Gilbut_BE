@@ -1,8 +1,7 @@
 package com.gilbeot.gilbut.dto.user.request;
 
-import jakarta.validation.constraints.Min;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -10,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmergencyContactSaveRequest {
 
     @NotBlank(message = "비상 연락처 이름을 입력해 주세요.")
@@ -32,11 +32,4 @@ public class EmergencyContactSaveRequest {
             message = "전화번호 형식이 올바르지 않습니다."
     )
     private String phoneNumber;
-
-    @NotNull(message = "비상 연락 우선순위를 입력해 주세요.")
-    @Min(
-            value = 1,
-            message = "우선순위는 1 이상이어야 합니다."
-    )
-    private Integer priority;
 }

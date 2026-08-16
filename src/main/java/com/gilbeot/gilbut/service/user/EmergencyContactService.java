@@ -22,7 +22,6 @@ public class EmergencyContactService {
     private final UserRepository userRepository;
     private final EmergencyContactRepository emergencyContactRepository;
 
-    // 비상 연락처 목록 조회
     public List<EmergencyContactResponse> getEmergencyContacts(
             Long userId
     ) {
@@ -33,7 +32,6 @@ public class EmergencyContactService {
                 .toList();
     }
 
-    // 비상 연락처 등록
     @Transactional
     public EmergencyContactResponse createEmergencyContact(
             Long userId,
@@ -44,20 +42,18 @@ public class EmergencyContactService {
                         new CustomException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        EmergencyContact contact =
-                EmergencyContact.builder()
-                        .user(user)
-                        .name(request.getName().trim())
-                        .relationship(
-                                request.getRelationship().trim()
-                        )
-                        .phoneNumber(
-                                normalizePhoneNumber(
-                                        request.getPhoneNumber()
-                                )
-                        )
-                        .priority(request.getPriority())
-                        .build();
+        List<EmergencyContact> contacts = emergencyContactRepository
+                .findAllByUserIdOrderByPriorityAscIdAsc(userId);
+
+        normalizePriorities(contacts);
+
+        EmergencyContact contact = EmergencyContact.builder()
+                .user(user)
+                .name(request.getName().trim())
+                .relationship(request.getRelationship().trim())
+                .phoneNumber(normalizePhoneNumber(request.getPhoneNumber()))
+                .priority(contacts.size() + 1)
+                .build();
 
         EmergencyContact savedContact =
                 emergencyContactRepository.save(contact);
@@ -65,54 +61,67 @@ public class EmergencyContactService {
         return EmergencyContactResponse.from(savedContact);
     }
 
-    // 비상 연락처 수정
     @Transactional
     public EmergencyContactResponse updateEmergencyContact(
             Long userId,
             Long contactId,
             EmergencyContactSaveRequest request
     ) {
-        EmergencyContact contact =
-                emergencyContactRepository
-                        .findByIdAndUserId(contactId, userId)
-                        .orElseThrow(() ->
-                                new CustomException(
-                                        ErrorCode.EMERGENCY_CONTACT_NOT_FOUND
-                                )
-                        );
+        EmergencyContact contact = emergencyContactRepository
+                .findByIdAndUserId(contactId, userId)
+                .orElseThrow(() ->
+                        new CustomException(
+                                ErrorCode.EMERGENCY_CONTACT_NOT_FOUND
+                        )
+                );
 
         contact.update(
                 request.getName().trim(),
                 request.getRelationship().trim(),
-                normalizePhoneNumber(request.getPhoneNumber()),
-                request.getPriority()
+                normalizePhoneNumber(request.getPhoneNumber())
         );
 
-        EmergencyContact savedContact =
-                emergencyContactRepository.save(contact);
-
-        return EmergencyContactResponse.from(savedContact);
+        return EmergencyContactResponse.from(contact);
     }
 
-    // 비상 연락처 삭제
     @Transactional
     public void deleteEmergencyContact(
             Long userId,
             Long contactId
     ) {
-        EmergencyContact contact =
-                emergencyContactRepository
-                        .findByIdAndUserId(contactId, userId)
-                        .orElseThrow(() ->
-                                new CustomException(
-                                        ErrorCode.EMERGENCY_CONTACT_NOT_FOUND
-                                )
-                        );
+        EmergencyContact contact = emergencyContactRepository
+                .findByIdAndUserId(contactId, userId)
+                .orElseThrow(() ->
+                        new CustomException(
+                                ErrorCode.EMERGENCY_CONTACT_NOT_FOUND
+                        )
+                );
+
+        List<EmergencyContact> contacts = emergencyContactRepository
+                .findAllByUserIdOrderByPriorityAscIdAsc(userId);
 
         emergencyContactRepository.delete(contact);
+
+        int priority = 1;
+
+        for (EmergencyContact existingContact : contacts) {
+            if (!contactId.equals(existingContact.getId())) {
+                existingContact.updatePriority(priority++);
+            }
+        }
     }
 
-    private String normalizePhoneNumber(String phoneNumber) {
+    private void normalizePriorities(
+            List<EmergencyContact> contacts
+    ) {
+        for (int i = 0; i < contacts.size(); i++) {
+            contacts.get(i).updatePriority(i + 1);
+        }
+    }
+
+    private String normalizePhoneNumber(
+            String phoneNumber
+    ) {
         return phoneNumber.replaceAll("[^0-9]", "");
     }
 }
