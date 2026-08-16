@@ -96,6 +96,9 @@ public class RouteAccessibilityEnrichmentService {
                 .transitRoutes(
                         candidateResult.getTransitRoutes()
                 )
+                .transitRouteFailure(
+                        candidateResult.getTransitRouteFailure()
+                )
                 .build();
     }
 

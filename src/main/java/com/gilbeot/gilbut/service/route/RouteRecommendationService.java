@@ -270,6 +270,9 @@ public class RouteRecommendationService {
                 .transitRoutes(
                         candidateResult.getTransitRoutes()
                 )
+                .transitRouteFailure(
+                        candidateResult.getTransitRouteFailure()
+                )
                 .build();
     }
 }

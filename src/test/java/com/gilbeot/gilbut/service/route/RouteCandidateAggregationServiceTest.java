@@ -4,6 +4,7 @@ import com.gilbeot.gilbut.domain.route.RouteType;
 import com.gilbeot.gilbut.domain.route.WalkingRouteOption;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailureCode;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteItemResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteSummaryResponse;
@@ -12,6 +13,7 @@ import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteSummaryResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.global.exception.TransitRouteSearchException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -191,6 +193,10 @@ class RouteCandidateAggregationServiceTest {
         assertThat(
                 result.getTransitRoutes()
         ).isNotNull();
+
+        assertThat(
+                result.getTransitRouteFailure()
+        ).isNull();
     }
 
     @Test
@@ -204,8 +210,8 @@ class RouteCandidateAggregationServiceTest {
 
         when(transitRouteService.search(any()))
                 .thenThrow(
-                        new CustomException(
-                                ErrorCode.ROUTE_SEARCH_FAILED
+                        new TransitRouteSearchException(
+                                TransitRouteFailureCode.QUOTA_EXCEEDED
                         )
                 );
 
@@ -241,6 +247,21 @@ class RouteCandidateAggregationServiceTest {
         assertThat(
                 result.getTransitRoutes()
         ).isNull();
+
+        assertThat(
+                result.getTransitRouteFailure()
+                        .getCode()
+        ).isEqualTo(
+                TransitRouteFailureCode.QUOTA_EXCEEDED
+        );
+
+        assertThat(
+                result.getTransitRouteFailure()
+                        .getMessage()
+        ).isEqualTo(
+                TransitRouteFailureCode.QUOTA_EXCEEDED
+                        .getMessage()
+        );
     }
 
     @Test
