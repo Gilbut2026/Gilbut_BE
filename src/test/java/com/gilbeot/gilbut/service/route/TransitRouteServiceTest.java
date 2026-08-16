@@ -3,10 +3,12 @@ package com.gilbeot.gilbut.service.route;
 import com.gilbeot.gilbut.client.tmap.TmapTransitRouteClient;
 import com.gilbeot.gilbut.client.tmap.dto.transit.TmapTransitRouteRequest;
 import com.gilbeot.gilbut.client.tmap.dto.transit.TmapTransitRouteResponse;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailureCode;
 import com.gilbeot.gilbut.dto.route.transit.request.TransitRouteRequest;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.global.exception.TransitRouteSearchException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -318,14 +321,24 @@ class TransitRouteServiceTest {
                 tmapTransitRouteClient.search(any())
         ).thenReturn(new TmapTransitRouteResponse());
 
-        assertThatThrownBy(() ->
-                transitRouteService.search(
-                        transitRouteRequest()
-                )
-        )
-                .isInstanceOf(CustomException.class)
+        Throwable throwable =
+                catchThrowable(() ->
+                        transitRouteService.search(
+                                transitRouteRequest()
+                        )
+                );
+
+        assertThat(throwable)
+                .isInstanceOf(TransitRouteSearchException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.ROUTE_SEARCH_FAILED);
+
+        assertThat(throwable)
+                .isInstanceOf(TransitRouteSearchException.class)
+                .extracting("failureCode")
+                .isEqualTo(
+                        TransitRouteFailureCode.NO_ROUTE
+                );
     }
 
     private TransitRouteRequest transitRouteRequest() {

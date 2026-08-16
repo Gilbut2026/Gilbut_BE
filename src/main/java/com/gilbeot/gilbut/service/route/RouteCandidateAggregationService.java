@@ -3,12 +3,15 @@ package com.gilbeot.gilbut.service.route;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailure;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailureCode;
 import com.gilbeot.gilbut.dto.route.transit.request.TransitRouteRequest;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
 import com.gilbeot.gilbut.dto.route.walking.request.WalkingRouteRequest;
 import com.gilbeot.gilbut.dto.route.walking.response.WalkingRouteResponse;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.global.exception.TransitRouteSearchException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +35,7 @@ public class RouteCandidateAggregationService {
 
         WalkingRouteResponse walkingRoute = null;
         TransitRouteResponse transitRoutes = null;
+        TransitRouteFailure transitRouteFailure = null;
 
         try {
             walkingRoute =
@@ -67,6 +71,11 @@ public class RouteCandidateAggregationService {
                     != ErrorCode.ROUTE_SEARCH_FAILED) {
                 throw e;
             }
+
+            transitRouteFailure =
+                    TransitRouteFailure.from(
+                            transitFailureCode(e)
+                    );
         }
 
         if (candidates.isEmpty()) {
@@ -82,7 +91,21 @@ public class RouteCandidateAggregationService {
                 .candidates(candidates)
                 .walkingRoute(walkingRoute)
                 .transitRoutes(transitRoutes)
+                .transitRouteFailure(transitRouteFailure)
                 .build();
+    }
+
+    private TransitRouteFailureCode transitFailureCode(
+            CustomException exception
+    ) {
+        if (exception instanceof TransitRouteSearchException
+                transitRouteSearchException) {
+
+            return transitRouteSearchException
+                    .getFailureCode();
+        }
+
+        return TransitRouteFailureCode.PROVIDER_ERROR;
     }
 
     private WalkingRouteRequest toWalkingRouteRequest(

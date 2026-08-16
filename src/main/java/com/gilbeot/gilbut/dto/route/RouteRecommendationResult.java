@@ -21,4 +21,5 @@ public class RouteRecommendationResult {
     private DrtGuideResponse drtGuide;
     private WalkingRouteResponse walkingRoute;
     private TransitRouteResponse transitRoutes;
+    private TransitRouteFailure transitRouteFailure;
 }

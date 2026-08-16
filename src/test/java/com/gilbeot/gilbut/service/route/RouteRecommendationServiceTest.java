@@ -15,6 +15,8 @@ import com.gilbeot.gilbut.dto.route.RouteCandidateRequest;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteMetrics;
 import com.gilbeot.gilbut.dto.route.RouteRecommendationResult;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailure;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailureCode;
 import com.gilbeot.gilbut.dto.user.response.MobilityProfileResponse;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import com.gilbeot.gilbut.service.drt.DrtGuideService;
@@ -134,6 +136,11 @@ class RouteRecommendationServiceTest {
                         .requestId("request-1")
                         .candidates(
                                 List.of(candidate)
+                        )
+                        .transitRouteFailure(
+                                TransitRouteFailure.from(
+                                        TransitRouteFailureCode.NO_ROUTE
+                                )
                         )
                         .build();
 
@@ -299,6 +306,13 @@ class RouteRecommendationServiceTest {
 
         assertThat(result.getDrtGuide())
                 .isSameAs(drtGuide);
+
+        assertThat(
+                result.getTransitRouteFailure()
+                        .getCode()
+        ).isEqualTo(
+                TransitRouteFailureCode.NO_ROUTE
+        );
 
         assertThat(
                 result.getDrtGuide()

@@ -11,8 +11,10 @@ import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitRouteSummaryResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitStopResponse;
 import com.gilbeot.gilbut.dto.route.transit.response.TransitWalkingStepResponse;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailureCode;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
+import com.gilbeot.gilbut.global.exception.TransitRouteSearchException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -54,8 +56,8 @@ public class TransitRouteService {
                 extractItineraries(tmapResponse);
 
         if (itineraries.isEmpty()) {
-            throw new CustomException(
-                    ErrorCode.ROUTE_SEARCH_FAILED
+            throw new TransitRouteSearchException(
+                    TransitRouteFailureCode.NO_ROUTE
             );
         }
 

@@ -9,6 +9,8 @@ import com.gilbeot.gilbut.dto.route.RouteAccessibilitySignals;
 import com.gilbeot.gilbut.dto.route.RouteCandidate;
 import com.gilbeot.gilbut.dto.route.RouteCandidateResult;
 import com.gilbeot.gilbut.dto.route.RouteWalkSegment;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailure;
+import com.gilbeot.gilbut.dto.route.TransitRouteFailureCode;
 import com.gilbeot.gilbut.global.common.code.ErrorCode;
 import com.gilbeot.gilbut.global.exception.CustomException;
 import org.junit.jupiter.api.AfterEach;
@@ -407,6 +409,50 @@ class RouteAccessibilityEnrichmentServiceTest {
                 resultSegment
                         .getAccessibilitySignals()
         ).isNull();
+
+        verifyNoInteractions(
+                tmapWalkingRouteClient,
+                walkingAccessibilitySignalExtractor
+        );
+    }
+
+    @Test
+    @DisplayName(
+            "접근성 정보 보강 후에도 대중교통 조회 실패 사유를 유지한다"
+    )
+    void preservesTransitRouteFailure() {
+        RouteCandidate candidate =
+                RouteCandidate.builder()
+                        .routeId("walking-1")
+                        .routeType(
+                                RouteType.WALKING
+                        )
+                        .build();
+
+        RouteCandidateResult candidateResult =
+                RouteCandidateResult.builder()
+                        .requestId("request-1")
+                        .candidates(
+                                List.of(candidate)
+                        )
+                        .transitRouteFailure(
+                                TransitRouteFailure.from(
+                                        TransitRouteFailureCode
+                                                .KEY_OR_PERMISSION
+                                )
+                        )
+                        .build();
+
+        RouteCandidateResult result =
+                routeAccessibilityEnrichmentService
+                        .enrich(candidateResult);
+
+        assertThat(
+                result.getTransitRouteFailure()
+                        .getCode()
+        ).isEqualTo(
+                TransitRouteFailureCode.KEY_OR_PERMISSION
+        );
 
         verifyNoInteractions(
                 tmapWalkingRouteClient,

@@ -15,4 +15,5 @@ public class RouteCandidateResult {
     private List<RouteCandidate> candidates;
     private WalkingRouteResponse walkingRoute;
     private TransitRouteResponse transitRoutes;
+    private TransitRouteFailure transitRouteFailure;
 }
