@@ -18,4 +18,7 @@ public interface EmergencyContactRepository
             Long userId
     );
     long countByUserId(Long userId);
+
+    // 회원 탈퇴 시 사용자에게 딸린 것을 한 번에 지운다
+    void deleteByUserId(Long userId);
 }

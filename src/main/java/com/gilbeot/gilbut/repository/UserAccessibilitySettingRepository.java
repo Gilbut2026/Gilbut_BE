@@ -8,4 +8,7 @@ import java.util.Optional;
 public interface UserAccessibilitySettingRepository
         extends JpaRepository<UserAccessibilitySetting, Long> {
     Optional<UserAccessibilitySetting> findByUserId(Long userId);
+
+    // 회원 탈퇴 시 사용자에게 딸린 것을 한 번에 지운다
+    void deleteByUserId(Long userId);
 }
